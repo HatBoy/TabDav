@@ -45,7 +45,7 @@ Unlike other "Read It Later" tools or tab managers that lock your data in propri
 ![Settings View](assets/screenshot_settings.png)
 
 ### 3. Toolkit
-*Tab Grouping for better organization, Markdown Export for your notes*
+*Tab Grouping for better organization, Markdown Export for your notes.*
 
 ![Tab List View](assets/screenshot_toolkit.png)
 

@@ -224,6 +224,9 @@ export default {
     unknown: 'Error desconocido',
     clearFailed: 'Error al borrar',
     importCheckJsonFormat: 'Error de importación, por favor verifique el formato del archivo',
+    snapshotSaveFailed: 'Error al guardar la instantánea. No se puede completar la sincronización. Por favor, verifique el espacio de almacenamiento del navegador o la configuración de permisos.',
+    webdavNotConfigured: 'Por favor, configure primero el servidor WebDAV',
+    mkdirFailed: 'No se pudo crear el directorio de sincronización "{path}": {message}',
   },
   // Formato de tiempo
   time: {

@@ -79,7 +79,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     conflictStrategy: 'local',
   },
   theme: 'system',
-  language: 'zh-CN',
+  language: 'en',
   notificationsEnabled: true,
   closeAfterCollect: false,
   showUnsyncedBadge: true,

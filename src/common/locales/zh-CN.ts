@@ -222,6 +222,9 @@ export default {
     unknown: '未知错误',
     clearFailed: '清除失败',
     importCheckJsonFormat: '导入失败，请检查文件格式',
+    snapshotSaveFailed: '快照保存失败，同步无法完成。请检查浏览器存储空间或权限设置。',
+    webdavNotConfigured: '请先配置 WebDAV 服务器',
+    mkdirFailed: '无法创建同步目录 "{path}": {message}',
   },
   // 时间格式化
   time: {

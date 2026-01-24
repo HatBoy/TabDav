@@ -193,6 +193,23 @@ export class WebDavClient {
       method: 'HEAD',
       url: path,
     });
+    // HEAD 请求可能对目录返回 404/405，需要额外检查
+    return result.success;
+  }
+
+  /**
+   * 检查目录是否存在（使用 PROPFIND，更可靠）
+   */
+  async directoryExists(path: string): Promise<boolean> {
+    const result = await this.request({
+      method: 'PROPFIND',
+      url: path,
+      headers: {
+        Depth: '0',
+        'Content-Type': 'text/xml',
+      },
+      body: '',
+    });
     return result.success;
   }
 

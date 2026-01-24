@@ -11,6 +11,7 @@ import type { TabItem } from '../types/tab';
 import type { Group } from '../types/group';
 import { SyncStatus, SYNC_METADATA_KEY } from '../types/sync';
 import { getDB } from '../utils/storage';
+import { t } from '../i18n/background';
 
 // 快照存储key
 const SNAPSHOT_STORAGE_KEY = 'tabdav_sync_snapshot';
@@ -94,7 +95,7 @@ export class SyncEngine {
       // 获取WebDav客户端
       this.client = await createClientFromSettings();
       if (!this.client) {
-        throw new Error('请先配置WebDav服务器');
+        throw new Error(t('errors.webdavNotConfigured'));
       }
 
       // 确保同步目录存在
@@ -118,6 +119,166 @@ export class SyncEngine {
           console.warn('解析远程数据失败，将使用本地数据');
         }
       }
+
+      // 🛡️ Cold Start Guard (首次同步保护)
+      // 在首次同步时（Base 不存在），禁止因 Remote 为空而清空本地数据
+      const isFirstSync = !snapshotData; // Base 不存在 = 首次同步
+      const remoteIsEmpty = !remoteData || !remoteData.tabs || remoteData.tabs.length === 0;
+      const localHasData = localData.tabs.length > 0;
+
+      if (isFirstSync && remoteIsEmpty && localHasData) {
+        // Case A: 首次同步 + 远程为空 + 本地有数据 → Force Push
+
+        // 直接使用本地数据作为合并结果（跳过三路合并）
+        const exportData: ExportData = {
+          version: 1,
+          exportedAt: Date.now(),
+          tabs: localData.tabs,
+          groups: localData.groups,
+          syncMetadata: {
+            id: SYNC_METADATA_KEY,
+            lastSyncTime: Date.now(),
+            localVersion: localData.syncMetadata.localVersion,
+            serverVersion: 0,
+            status: SyncStatus.IDLE,
+            pendingChanges: 0,
+          },
+        };
+
+        // 上传到远程
+        const uploadResult = await this.client.upload(
+          JSON.stringify(exportData),
+          this.client.getDataPath()
+        );
+
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.message);
+        }
+
+        // 标记所有 Tab 为已同步
+        await tabService.markAllSynced();
+
+        // 更新同步元数据
+        await syncMetadataService.markCompleted();
+        await syncMetadataService.incrementLocalVersion();
+
+        // 保存快照
+        try {
+          await this.saveSnapshot(exportData);
+        } catch (error) {
+          console.error('[SyncEngine] ❌ 快照保存失败:', error);
+          throw new Error(t('errors.snapshotSaveFailed'));
+        }
+
+        return {
+          success: true,
+          uploaded: localData.tabs.length,
+          downloaded: 0,
+          conflicts: 0,
+          timestamp: Date.now(),
+        };
+      }
+
+      if (isFirstSync && !remoteIsEmpty && !localHasData) {
+        // Case B: 首次同步 + 远程有数据 + 本地为空 → Pull
+
+        // 直接使用远程数据
+        await this.importData(remoteData!);
+        await tabService.markAllSynced();
+        await syncMetadataService.markCompleted();
+        await syncMetadataService.incrementLocalVersion();
+
+        try {
+          await this.saveSnapshot(remoteData!);
+        } catch (error) {
+          console.error('[SyncEngine] ❌ 快照保存失败:', error);
+        }
+
+        return {
+          success: true,
+          uploaded: 0,
+          downloaded: remoteData!.tabs.length,
+          conflicts: 0,
+          timestamp: Date.now(),
+        };
+      }
+
+      if (isFirstSync && !remoteIsEmpty && localHasData) {
+        // Case C: 首次同步 + 两边都有数据 → Merge (Union)
+
+        // 使用 URL 作为唯一标识符，合并两边的数据（取并集）
+        const localTabMap = new Map(localData.tabs.map(t => [t.url.toLowerCase(), t]));
+        const remoteTabMap = new Map(remoteData!.tabs.map(t => [t.url.toLowerCase(), t]));
+
+        // 取并集：远程优先（如果 URL 相同，保留较新的）
+        for (const [url, localTab] of localTabMap) {
+          const remoteTab = remoteTabMap.get(url);
+          if (!remoteTab || localTab.updatedAt > remoteTab.updatedAt) {
+            remoteTabMap.set(url, localTab);
+          }
+        }
+
+        // 同样合并 Groups
+        const localGroupMap = new Map(localData.groups.map(g => [g.id, g]));
+        const remoteGroupMap = new Map(remoteData!.groups.map(g => [g.id, g]));
+
+        for (const [id, localGroup] of localGroupMap) {
+          const remoteGroup = remoteGroupMap.get(id);
+          if (!remoteGroup || localGroup.updatedAt > remoteGroup.updatedAt) {
+            remoteGroupMap.set(id, localGroup);
+          }
+        }
+
+        const mergedTabs = Array.from(remoteTabMap.values());
+        const mergedGroups = Array.from(remoteGroupMap.values());
+
+        const exportData: ExportData = {
+          version: 1,
+          exportedAt: Date.now(),
+          tabs: mergedTabs,
+          groups: mergedGroups,
+          syncMetadata: {
+            id: SYNC_METADATA_KEY,
+            lastSyncTime: Date.now(),
+            localVersion: localData.syncMetadata.localVersion,
+            serverVersion: remoteData!.syncMetadata?.localVersion || 0,
+            status: SyncStatus.IDLE,
+            pendingChanges: 0,
+          },
+        };
+
+        // 上传合并结果
+        const uploadResult = await this.client.upload(
+          JSON.stringify(exportData),
+          this.client.getDataPath()
+        );
+
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.message);
+        }
+
+        // 更新本地
+        await this.importData(exportData);
+        await tabService.markAllSynced();
+        await syncMetadataService.markCompleted();
+        await syncMetadataService.incrementLocalVersion();
+
+        try {
+          await this.saveSnapshot(exportData);
+        } catch (error) {
+          console.error('[SyncEngine] ❌ 快照保存失败:', error);
+        }
+
+        return {
+          success: true,
+          uploaded: mergedTabs.length,
+          downloaded: mergedTabs.length,
+          conflicts: 0,
+          timestamp: Date.now(),
+        };
+      }
+
+      // 🔄 正常的三路合并（非首次同步）
 
       // 合并数据 - 使用三路合并逻辑（L-S-R）
       const { mergedTabs, mergedGroups } = await this.mergeData(
@@ -171,8 +332,8 @@ export class SyncEngine {
         await this.saveSnapshot(exportData);
       } catch (error) {
         console.error('[SyncEngine] ❌ 快照保存失败:', error);
-        // 快照保存失败不应该导致整个同步失败，但需要记录错误
-        // 下次同步时可能会出现问题，因为没有快照来检测删除操作
+        // 快照保存失败应该导致整个同步失败，因为下次同步将无法正确检测删除操作
+        throw new Error(t('errors.snapshotSaveFailed'));
       }
 
       // 计算统计数据
@@ -522,16 +683,24 @@ export class SyncEngine {
   }
 
   /**
-   * 确保同步目录存在
+   * 确保���步目录存在
    */
   private async ensureSyncDirectory(): Promise<void> {
     if (!this.client) return;
 
     const dataPath = this.client.getDataPath();
+    // 从数据路径中提取目录路径
     const dirPath = dataPath.split('/').slice(0, -1).join('/') || '/';
-    const exists = await this.client.exists(dirPath);
+
+    // 使用 PROPFIND 检查目录是否存在（比 HEAD 更可靠）
+    const exists = await this.client.directoryExists(dirPath);
     if (!exists) {
-      await this.client.mkdir(dirPath || dataPath);
+      // 尝试创建目录（使用 MKCOL）
+      const mkdirResult = await this.client.mkdir(dirPath);
+      if (!mkdirResult.success) {
+        // 如果创建失败，抛出错误让用户知道
+        throw new Error(t('errors.mkdirFailed', { path: dirPath, message: mkdirResult.message }));
+      }
     }
   }
 

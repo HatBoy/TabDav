@@ -223,6 +223,9 @@ export default {
     unknown: '不明なエラー',
     clearFailed: '消去に失敗しました',
     importCheckJsonFormat: 'インポート失敗、ファイル形式を確認してください',
+    snapshotSaveFailed: 'スナップショットの保存に失敗しました。同期を完了できません。ブラウザのストレージ容量または権限設定を確認してください。',
+    webdavNotConfigured: '最初にWebDAVサーバーを設定してください',
+    mkdirFailed: '同期ディレクトリ "{path}" の作成に失敗しました: {message}',
   },
   // 時間フォーマット
   time: {

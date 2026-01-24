@@ -223,6 +223,9 @@ export default {
     unknown: 'Erro desconhecido',
     clearFailed: 'Falha ao limpar',
     importCheckJsonFormat: 'Falha na importação, por favor verifique o formato do arquivo',
+    snapshotSaveFailed: 'Falha ao salvar o snapshot. A sincronização não pode ser concluída. Por favor, verifique o espaço de armazenamento do navegador ou as configurações de permissão.',
+    webdavNotConfigured: 'Por favor, configure o servidor WebDAV primeiro',
+    mkdirFailed: 'Falha ao criar o diretório de sincronização "{path}": {message}',
   },
   // Formatação de tempo
   time: {

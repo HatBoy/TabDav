@@ -267,6 +267,9 @@ export default {
     unknown: 'Unknown error',
     clearFailed: 'Clear failed',
     importCheckJsonFormat: 'Import failed, please check the file format',
+    snapshotSaveFailed: 'Snapshot save failed. Sync cannot be completed. Please check browser storage space or permission settings.',
+    webdavNotConfigured: 'Please configure WebDAV server first',
+    mkdirFailed: 'Failed to create sync directory "{path}": {message}',
   },
   // Validation messages
   validation: {

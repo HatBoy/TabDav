@@ -34,7 +34,7 @@
       "run_at": "document_idle"
     }
   ],
-  "permissions": ["tabs", "storage", "alarms", "contextMenus", "webRequest"],
+  "permissions": ["tabs", "storage", "alarms", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "web_accessible_resources": [
     {

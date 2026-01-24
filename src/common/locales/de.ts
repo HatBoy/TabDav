@@ -226,6 +226,9 @@ export default {
     unknown: 'Unbekannter Fehler',
     clearFailed: 'Löschen fehlgeschlagen',
     importCheckJsonFormat: 'Import fehlgeschlagen, bitte überprüfen Sie das Dateiformat',
+    snapshotSaveFailed: 'Snapshot-Speicherung fehlgeschlagen. Synchronisierung kann nicht abgeschlossen werden. Bitte überprüfen Sie den Browser-Speicherplatz oder die Berechtigungseinstellungen.',
+    webdavNotConfigured: 'Bitte konfigurieren Sie zuerst den WebDAV-Server',
+    mkdirFailed: 'Synchronisierungsverzeichnis "{path}" konnte nicht erstellt werden: {message}',
   },
   // Zeitformatierung
   time: {

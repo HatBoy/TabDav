@@ -225,6 +225,9 @@ export default {
     unknown: 'Erreur inconnue',
     clearFailed: 'Échec de la suppression',
     importCheckJsonFormat: "Échec de l'importation, vérifiez le format du fichier",
+    snapshotSaveFailed: "Échec de l'enregistrement de l'instantané. La synchronisation ne peut pas être terminée. Veuillez vérifier l'espace de stockage du navigateur ou les paramètres d'autorisation.",
+    webdavNotConfigured: 'Veuillez d\'abord configurer le serveur WebDAV',
+    mkdirFailed: 'Impossible de créer le répertoire de synchronisation "{path}" : {message}',
   },
   // Formatage du temps
   time: {

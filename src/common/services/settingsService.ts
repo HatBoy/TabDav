@@ -186,7 +186,7 @@ class SettingsService {
    */
   async getLanguage(): Promise<string> {
     const settings = await this.get();
-    return settings.language || 'zh-CN';
+    return settings.language || 'en';
   }
 
   /**

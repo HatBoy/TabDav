@@ -213,6 +213,7 @@ const messages: Record<LocaleCode, LocaleMessages> = {
       unknown: '未知错误',
       clearFailed: '清除失败',
       importCheckJsonFormat: '导入失败，请检查文件格式',
+      snapshotSaveFailed: '快照保存失败，同步无法完成。请检查浏览器存储空间或权限设置。',
     },
     time: {
       justNow: '刚刚',
@@ -704,6 +705,9 @@ const messages: Record<LocaleCode, LocaleMessages> = {
       importFailed: 'Import failed: {message}',
       exportFailed: 'Export failed',
       unknown: 'Unknown error',
+      snapshotSaveFailed: 'Snapshot save failed. Sync cannot be completed. Please check browser storage space or permission settings.',
+      webdavNotConfigured: 'Please configure WebDAV server first',
+      mkdirFailed: 'Failed to create sync directory "{path}": {message}',
     },
     time: {
       justNow: 'just now',
