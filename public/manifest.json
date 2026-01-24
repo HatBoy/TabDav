@@ -1,0 +1,68 @@
+{
+  "manifest_version": 3,
+  "name": "TabDav - Tab Manager & Sync",
+  "version": "1.0.0",
+  "description": "Cross-device tab management browser extension with WebDav sync. Continue reading anywhere, anytime.",
+  "author": "TabDav",
+  "homepage_url": "https://github.com/HatBoy/TabDav",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    },
+    "default_title": "TabDav - Tab Manager & Sync",
+    "default_width": 420,
+    "default_height": 600
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["tabs", "storage", "alarms", "contextMenus", "webRequest"],
+  "host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Q",
+        "mac": "Alt+Q"
+      },
+      "description": "Open TabDav panel"
+    },
+    "collect-current-tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Save current tab"
+    },
+    "collect-all-tabs": {
+      "suggested_key": {
+        "default": "Alt+Shift+Q",
+        "mac": "Alt+Shift+Q"
+      },
+      "description": "Save all tabs"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 24 24" fill="none">
+  <defs>
+    <linearGradient id="blue_gradient" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <filter id="soft_shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="0.5" flood-color="#2563eb" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#blue_gradient)" filter="url(#soft_shadow)" />
+
+  <g transform="translate(12, 12) scale(0.7) translate(-12, -12)">
+      <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
