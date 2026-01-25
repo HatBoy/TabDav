@@ -76,11 +76,11 @@ Unlike other "Read It Later" tools or tab managers that lock your data in propri
 
 TabDav has been tested and verified with the following providers:
 
-* **SFTPGo**
+* **Nutstore (Jianguoyun)**: Create a “tabdav” directory in the root directory of your cloud storage. Enter the service address: https://dav.jianguoyun.com/dav/tabdav/
+* **SFTPGo**: Requires setting CORS-related environment variables, such as SFTPGO_WEBDAVD__CORS__ENABLED, SFTPGO_WEBDAVD__CORS__ALLOWED_ORIGINS, SFTPGO_WEBDAVD__CORS__ALLOWED_METHODS, etc.
 * **Nextcloud**
 * **ownCloud**
 * **Seafile**
-* **Nutstore (Jianguoyun)**
 * Any other server adhering to the standard WebDAV protocol
 
 ### ⚠️ Important Note on CORS (Server Configuration)

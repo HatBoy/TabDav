@@ -75,11 +75,11 @@
 
 我们已在以下环境中测试并通过验证：
 
-* **SFTPGo**
+* **坚果云**：云盘根目录新建“tabdav”目录，服务地址填写：https://dav.jianguoyun.com/dav/tabdav/
+* **SFTPGo**：需要设置CORS相关环境变量，如SFTPGO_WEBDAVD__CORS__ENABLED、SFTPGO_WEBDAVD__CORS__ALLOWED_ORIGINS、SFTPGO_WEBDAVD__CORS__ALLOWED_METHODS等环境变量。
 * **Nextcloud**
 * **ownCloud**
 * **Seafile**
-* **坚果云**
 * 其他标准 WebDAV 协议服务器
 
 ### ⚠️ 关于 CORS 跨域配置的重要说明（自建服务必读）
