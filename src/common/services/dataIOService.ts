@@ -7,6 +7,7 @@
 import { tabService } from './tabService';
 import { groupService } from './groupService';
 import { getDB } from '../utils/storage';
+import type { ListType } from '../types/group';
 
 /**
  * Group数据（Map格式）
@@ -14,9 +15,10 @@ import { getDB } from '../utils/storage';
 export interface GroupData {
   id: string;
   name: string;
-  color: string;
+  color?: string;
   createdAt: number;
   updatedAt: number;
+  listType?: ListType;
 }
 
 /**
@@ -27,10 +29,18 @@ export interface TabData {
   title: string;
   favicon?: string;
   groupId?: string;
+  deletedAt?: number;
+  originalGroupId?: string;
+  status?: 'completed' | 'deleted';
+  inboxAt?: number;
+  cleanedByWind?: boolean;
   createdAt: number;
   updatedAt: number;
+  lastVisited?: number;
   note?: string;
   tags?: string[];
+  syncStatus: 'synced' | 'pending' | 'error';
+  syncError?: string;
 }
 
 /**
@@ -79,9 +89,10 @@ class DataIOService {
       groupsMap[group.id] = {
         id: group.id,
         name: group.name,
-        color: group.color || '#3b82f6',
+        color: group.color,
         createdAt: group.createdAt,
         updatedAt: group.updatedAt,
+        listType: group.listType,
       };
     }
 
@@ -93,10 +104,18 @@ class DataIOService {
         title: tab.title,
         favicon: tab.favicon,
         groupId: tab.groupId,
+        deletedAt: tab.deletedAt,
+        originalGroupId: tab.originalGroupId,
+        status: tab.status,
+        inboxAt: tab.inboxAt,
+        cleanedByWind: tab.cleanedByWind,
         createdAt: tab.createdAt,
         updatedAt: tab.updatedAt,
+        lastVisited: tab.lastVisited,
         note: tab.note,
         tags: tab.tags,
+        syncStatus: tab.syncStatus,
+        syncError: tab.syncError,
       };
     }
 
@@ -153,9 +172,10 @@ class DataIOService {
           const group = {
             id: groupData.id,
             name: groupData.name,
-            color: groupData.color || '#3b82f6',
+            color: groupData.color,
             createdAt: groupData.createdAt,
             updatedAt: groupData.updatedAt,
+            listType: groupData.listType,
             tabCount: 0, // 稍后刷新
           };
           await db.put('groups', group);
@@ -188,15 +208,27 @@ class DataIOService {
             result.orphanedTabsFixed++;
           }
 
-          // 使用tabService.add保存（会自动生成新的tab ID）
-          await tabService.add({
+          // 直接保存到IndexedDB（保留所有原始字段，自动生成新的tab ID）
+          const tab = {
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
             url: tabData.url,
             title: tabData.title,
             favicon: tabData.favicon,
             groupId: finalGroupId,
+            deletedAt: tabData.deletedAt,
+            originalGroupId: tabData.originalGroupId,
+            status: tabData.status,
+            inboxAt: tabData.inboxAt,
+            cleanedByWind: tabData.cleanedByWind,
+            lastVisited: tabData.lastVisited,
             note: tabData.note,
             tags: tabData.tags,
-          });
+            syncStatus: tabData.syncStatus || 'pending',
+            syncError: tabData.syncError,
+            createdAt: tabData.createdAt,
+            updatedAt: tabData.updatedAt,
+          };
+          await db.put('tabs', tab);
 
           result.tabsAdded++;
         }

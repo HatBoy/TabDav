@@ -42,9 +42,24 @@ export default {
     export: 'Exportar',
     move: 'Mover',
     uncategorized: 'Sin categoría',
+    // Tipos de vista (flujo de trabajo de tres fases)
+    view: {
+      inbox: 'Bandeja de entrada',
+      lists: 'Listas',
+      history: 'Historial',
+    },
+    // Descripciones de vistas
+    viewDescription: {
+      inbox: 'Área de almacenamiento temporal para pestañas no clasificadas',
+      lists: 'Tus listas de acciones y buffers organizados',
+      history: 'Archivo de pestañas cerradas (solo lectura)',
+    },
     exportMode: {
       standard: 'Modo Lista Estándar',
       todo: 'Modo Tareas Pendientes',
+      confirmDeleteTitle: 'Eliminar pestañas exportadas',
+      confirmDeleteMessage: '¿Eliminar {count} pestaña(s) exportada(s) de la lista?',
+      confirmDeleteHint: 'Las pestañas se moverán al historial y se podrán restaurar más tarde.',
     },
     selectMode: {
       selected: '{{count}} sel.',
@@ -59,6 +74,9 @@ export default {
       syncError: 'Error',
       moveToGroup: 'Mover al grupo',
       removeFromGroup: 'Quitar del grupo',
+      copy: 'Copiar',
+      copyAsMarkdown: 'Copiar como Markdown',
+      copySuccess: '¡Copiado!',
       delete: 'Eliminar',
       deleteConfirm: '¿Está seguro de que desea eliminar "{title}"?',
       batchDeleteConfirm: '¿Está seguro de que desea eliminar las {count} pestañas seleccionadas?',
@@ -72,6 +90,24 @@ export default {
       delete: 'Eliminar Grupo',
       deleteConfirm: '¿Está seguro de que desea eliminar el grupo "{name}"?',
       deleteHint: '{count} pestañas en este grupo serán desagrupadas y mantenidas en "Todas".',
+    },
+    list: {
+      create: 'Nueva Lista',
+      namePlaceholder: 'Ingrese el nombre de la lista...',
+      selectMode: 'Seleccionar modo de lista',
+      mode: {
+        action: 'Lista de Acciones',
+        actionDesc: 'Abrir y Eliminar',
+        buffer: 'Lista de Buffer',
+        bufferDesc: 'Leer Más Tarde',
+      },
+    },
+    history: {
+      restore: 'Restaurar',
+      permanentDelete: 'Eliminar',
+      clearAll: 'Borrar Todo',
+      clearAllConfirm: '¿Está seguro de que desea borrar todo el historial? Esta acción eliminará permanentemente todos los elementos del historial.',
+      clearAllHint: 'Esta acción no se puede deshacer',
     },
   },
   options: {

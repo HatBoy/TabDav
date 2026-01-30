@@ -59,9 +59,12 @@ export const MESSAGE_TYPES = {
   TAB_DELETE: 'tab/delete',
   TAB_UPDATE: 'tab/update',
   TAB_RESTORE: 'tab/restore',
+  TAB_PERMANENT_DELETE: 'tab/permanent-delete',
   TAB_GET_ALL: 'tab/get-all',
   TAB_MOVE_TO_GROUP: 'tab/move-to-group',
   TAB_GET_BY_GROUP: 'tab/get-by-group',
+  TAB_CLEANUP_INBOX: 'tab/cleanup-inbox', // 清理Inbox中超过7天的tabs
+  TAB_CLEANUP_HISTORY: 'tab/cleanup-history', // 永久删除History中超过30天的tabs
 
   // 分组操作
   GROUP_CREATE: 'group/create',

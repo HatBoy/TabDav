@@ -37,6 +37,7 @@ class TabService {
 
   /**
    * 添加Tab（自动去重）
+   * 在同一事务中更新分组的tabCount
    * @returns { tab: TabItem, isDuplicate: boolean }
    */
   async add(input: CreateTabInput): Promise<{ tab: TabItem; isDuplicate: boolean }> {
@@ -50,6 +51,11 @@ class TabService {
       return { tab: existing, isDuplicate: true };
     }
 
+    const tx = db.transaction(['tabs', 'groups'], 'readwrite');
+    const tabStore = tx.objectStore('tabs');
+    const groupStore = tx.objectStore('groups');
+    const index = tabStore.index('by-group');
+
     const tab: TabItem = {
       id: generateId(),
       url: input.url,
@@ -61,9 +67,25 @@ class TabService {
       createdAt: now,
       updatedAt: now,
       syncStatus: 'pending',
+      // 如果添加到Inbox（groupId为空），设置inboxAt时间戳
+      inboxAt: input.groupId ? undefined : now,
     };
 
-    await db.put('tabs', tab);
+    await tabStore.put(tab);
+
+    // 如果添加到分组，更新该分组的tabCount
+    if (tab.groupId) {
+      const group = await groupStore.get(tab.groupId);
+      if (group) {
+        const allTabs = await index.getAll(tab.groupId);
+        const activeTabs = allTabs.filter(t => !t.deletedAt);
+        group.tabCount = activeTabs.length;
+        group.updatedAt = Date.now();
+        await groupStore.put(group);
+      }
+    }
+
+    await tx.done;
     return { tab, isDuplicate: false };
   }
 
@@ -89,6 +111,8 @@ class TabService {
         createdAt: now,
         updatedAt: now,
         syncStatus: 'pending',
+        // 如果添加到Inbox（groupId为空），设置inboxAt时间戳
+        inboxAt: input.groupId ? undefined : now,
       };
       store.put(tab);
       tabs.push(tab);
@@ -100,19 +124,27 @@ class TabService {
 
   /**
    * 更新Tab
+   * 当groupId改变时，在同一事务中更新相关分组的tabCount
+   * 同时处理inbox时间追踪
    */
   async update(input: UpdateTabInput): Promise<TabItem | null> {
     const db = await getDB();
-    const existing = await db.get('tabs', input.id);
+    const tx = db.transaction(['tabs', 'groups'], 'readwrite');
+    const tabStore = tx.objectStore('tabs');
+    const groupStore = tx.objectStore('groups');
+    const index = tabStore.index('by-group');
 
+    const existing = await tabStore.get(input.id);
     if (!existing) {
+      await tx.done;
       return null;
     }
 
     // 特殊处理 groupId：undefined 表示不更新，空字符串表示移出分组
     const newGroupId = input.groupId;
     const shouldUpdateGroupId = newGroupId !== undefined;
-    const finalGroupId = shouldUpdateGroupId ? newGroupId : existing.groupId;
+    const finalGroupId = shouldUpdateGroupId ? (newGroupId || undefined) : existing.groupId;
+    const oldGroupId = existing.groupId;
 
     const updated: TabItem = {
       ...existing,
@@ -125,24 +157,220 @@ class TabService {
       syncStatus: 'pending',
     };
 
-    await db.put('tabs', updated);
+    // 处理inbox时间追踪
+    if (shouldUpdateGroupId && oldGroupId !== finalGroupId) {
+      // 移入inbox：设置inboxAt时间
+      if (!finalGroupId) {
+        updated.inboxAt = Date.now();
+        // 清除风吹标记（用户主动移入inbox，不是风吹来的）
+        delete updated.cleanedByWind;
+      }
+      // 移出inbox：清除inboxAt
+      if (finalGroupId && !oldGroupId) {
+        delete updated.inboxAt;
+        delete updated.cleanedByWind;
+      }
+      // 从分组A移到分组B：不影响inbox状态（但如果之前在inbox，清除inbox标记）
+      if (oldGroupId && finalGroupId) {
+        delete updated.inboxAt;
+        delete updated.cleanedByWind;
+      }
+    }
 
+    await tabStore.put(updated);
+
+    // 如果groupId发生了改变，需要更新相关分组的tabCount
+    if (shouldUpdateGroupId && oldGroupId !== finalGroupId) {
+      // 更新旧分组的tabCount（如果从分组中移出）
+      if (oldGroupId) {
+        const oldGroup = await groupStore.get(oldGroupId);
+        if (oldGroup) {
+          const allTabs = await index.getAll(oldGroupId);
+          const activeTabs = allTabs.filter(t => !t.deletedAt);
+          oldGroup.tabCount = activeTabs.length;
+          oldGroup.updatedAt = Date.now();
+          await groupStore.put(oldGroup);
+        }
+      }
+
+      // 更新新分组的tabCount（如果移动到分组）
+      if (finalGroupId) {
+        const newGroup = await groupStore.get(finalGroupId);
+        if (newGroup) {
+          const allTabs = await index.getAll(finalGroupId);
+          const activeTabs = allTabs.filter(t => !t.deletedAt);
+          newGroup.tabCount = activeTabs.length;
+          newGroup.updatedAt = Date.now();
+          await groupStore.put(newGroup);
+        }
+      }
+    }
+
+    await tx.done;
     return updated;
   }
 
   /**
-   * 删除Tab
+   * 删除Tab（归档到History）
+   * 实际上不删除数据，而是设置 deletedAt 时间戳
+   * 在同一事务中更新分组的tabCount，确保数据一致性
+   * @param id - Tab ID
+   * @param status - 可选的状态标记：'completed' 表示已完成，'deleted' 表示已删除
    */
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, status?: 'completed' | 'deleted'): Promise<boolean> {
     const db = await getDB();
-    const existing = await db.get('tabs', id);
+    const tx = db.transaction(['tabs', 'groups'], 'readwrite');
+    const tabStore = tx.objectStore('tabs');
+    const groupStore = tx.objectStore('groups');
 
+    const existing = await tabStore.get(id);
     if (!existing) {
+      await tx.done;
       return false;
     }
 
-    await db.delete('tabs', id);
+    // 保存删除前的groupId（用于更新计数）
+    const groupId = existing.groupId;
+
+    // 保存删除前的 groupId，以便恢复时使用
+    existing.originalGroupId = existing.groupId;
+    // 设置删除时间戳，将tab归档到History
+    existing.deletedAt = Date.now();
+    existing.updatedAt = Date.now();
+    existing.syncStatus = 'pending';
+    // 设置状态标记（completed 或 deleted）
+    if (status) {
+      existing.status = status;
+    }
+
+    await tabStore.put(existing);
+
+    // 如果tab属于某个分组，在同一个事务中更新该分组的tabCount
+    if (groupId) {
+      const group = await groupStore.get(groupId);
+      if (group) {
+        // 使用索引获取该分组的所有未删除tabs
+        const index = tabStore.index('by-group');
+        const allTabs = await index.getAll(groupId);
+        const activeTabs = allTabs.filter(t => !t.deletedAt);
+        group.tabCount = activeTabs.length;
+        group.updatedAt = Date.now();
+        await groupStore.put(group);
+      }
+    }
+
+    // 等待事务完成确保数据已提交
+    await tx.done;
     return true;
+  }
+
+  /**
+   * 恢复Tab（从History恢复到原来的位置）
+   * 清除 deletedAt，并尝试恢复到 originalGroupId
+   * 如果原分组不存在，则恢复到 Inbox（groupId = undefined）
+   * 在同一事务中更新相关分组的tabCount
+   */
+  async restore(id: string): Promise<boolean> {
+    const db = await getDB();
+    const tx = db.transaction(['tabs', 'groups'], 'readwrite');
+    const tabStore = tx.objectStore('tabs');
+    const groupStore = tx.objectStore('groups');
+    const index = tabStore.index('by-group');
+
+    const existing = await tabStore.get(id);
+    if (!existing) {
+      await tx.done;
+      return false;
+    }
+
+    // 清除删除标记、风吹标记和状态标记（用户主动恢复，不是风吹来的）
+    delete existing.deletedAt;
+    delete existing.cleanedByWind;
+    delete existing.status;
+
+    // 尝试恢复到原来的分组
+    let newGroupId: string | undefined;
+    if (existing.originalGroupId) {
+      // 检查原分组是否还存在
+      const group = await groupStore.get(existing.originalGroupId);
+      if (group) {
+        // 分组存在，恢复到原分组
+        existing.groupId = existing.originalGroupId;
+        newGroupId = existing.originalGroupId;
+        // 清除inbox时间（不再在inbox中）
+        delete existing.inboxAt;
+      } else {
+        // 分组不存在，恢复到 Inbox
+        existing.groupId = undefined;
+        // 设置inbox时间（重新开始计时）
+        existing.inboxAt = Date.now();
+      }
+    } else {
+      // 没有 originalGroupId，恢复到 Inbox
+      existing.groupId = undefined;
+      // 设置inbox时间（重新开始计时）
+      existing.inboxAt = Date.now();
+    }
+
+    existing.updatedAt = Date.now();
+    existing.syncStatus = 'pending';
+
+    await tabStore.put(existing);
+
+    // 更新新分组的tabCount（如果恢复到了分组）
+    if (newGroupId) {
+      const group = await groupStore.get(newGroupId);
+      if (group) {
+        const allTabs = await index.getAll(newGroupId);
+        const activeTabs = allTabs.filter(t => !t.deletedAt);
+        group.tabCount = activeTabs.length;
+        group.updatedAt = Date.now();
+        await groupStore.put(group);
+      }
+    }
+
+    // 等待事务完成确保数据已提交
+    await tx.done;
+    return true;
+  }
+
+  /**
+   * 永久删除Tab（从数据库中真正删除）
+   * 使用显式事务确保数据一致性
+   */
+  async permanentDelete(id: string): Promise<boolean> {
+    const db = await getDB();
+    const tx = db.transaction('tabs', 'readwrite');
+    const store = tx.objectStore('tabs');
+
+    const existing = await store.get(id);
+    if (!existing) {
+      await tx.done;
+      return false;
+    }
+
+    await store.delete(id);
+    // 等待事务完成确保数据已提交
+    await tx.done;
+    return true;
+  }
+
+  /**
+   * 批量永久删除Tab
+   */
+  async bulkPermanentDelete(ids: string[]): Promise<number> {
+    const db = await getDB();
+    let deletedCount = 0;
+    const tx = db.transaction('tabs', 'readwrite');
+    const store = tx.objectStore('tabs');
+
+    for (const id of ids) {
+      await store.delete(id);
+      deletedCount++;
+    }
+
+    await tx.done;
+    return deletedCount;
   }
 
   /**
@@ -163,17 +391,49 @@ class TabService {
   }
 
   /**
-   * 批量删除Tab
+   * 批量删除Tab（归档到History）
+   * 在同一事务中更新相关分组的tabCount
    */
   async bulkDelete(ids: string[]): Promise<number> {
     const db = await getDB();
     let deletedCount = 0;
-    const tx = db.transaction('tabs', 'readwrite');
-    const store = tx.objectStore('tabs');
+    const tx = db.transaction(['tabs', 'groups'], 'readwrite');
+    const tabStore = tx.objectStore('tabs');
+    const groupStore = tx.objectStore('groups');
+    const index = tabStore.index('by-group');
+
+    // 用于收集需要更新计数的分组ID
+    const affectedGroupIds = new Set<string>();
 
     for (const id of ids) {
-      await store.delete(id);
-      deletedCount++;
+      const tab = await tabStore.get(id);
+      if (tab) {
+        // 记录受影响的分组ID
+        if (tab.groupId) {
+          affectedGroupIds.add(tab.groupId);
+        }
+
+        // 保存删除前的 groupId，以便恢复时使用
+        tab.originalGroupId = tab.groupId;
+        // 设置删除时间戳，将tab归档到History
+        tab.deletedAt = Date.now();
+        tab.updatedAt = Date.now();
+        tab.syncStatus = 'pending';
+        await tabStore.put(tab);
+        deletedCount++;
+      }
+    }
+
+    // 更新所有受影响分组的tabCount
+    for (const groupId of affectedGroupIds) {
+      const group = await groupStore.get(groupId);
+      if (group) {
+        const allTabs = await index.getAll(groupId);
+        const activeTabs = allTabs.filter(t => !t.deletedAt);
+        group.tabCount = activeTabs.length;
+        group.updatedAt = Date.now();
+        await groupStore.put(group);
+      }
     }
 
     await tx.done;
@@ -195,7 +455,7 @@ class TabService {
   }
 
   /**
-   * 根据分组ID获取Tab
+   * 根据分组ID获取Tab（排除已归档到History的Tab）
    */
   async getByGroup(groupId: string): Promise<TabItem[]> {
     const db = await getDB();
@@ -207,31 +467,32 @@ class TabService {
       tabs = tabs.filter(t => t.groupId === groupId);
     }
 
-    // 调试日志
-
-    return tabs;
+    // 排除已归档到History的Tab
+    return tabs.filter(t => !t.deletedAt);
   }
 
   /**
-   * 获取未分类的Tab
+   * 获取未分类的Tab（排除已归档到History的Tab）
    */
   async getUncategorized(): Promise<TabItem[]> {
     const db = await getDB();
     const allTabs = await db.getAll('tabs');
-    return allTabs.filter(tab => !tab.groupId);
+    return allTabs.filter(tab => !tab.groupId && !tab.deletedAt);
   }
 
   /**
    * 搜索Tab
    * 使用索引优化查询，关键词搜索仍需在内存中过滤
+   * 默认排除已归档到History的Tab（deletedAt）
    */
   async search(filters: TabSearchFilters): Promise<TabItem[]> {
     const db = await getDB();
 
     // 优先使用索引查询，减少数据加载量
     if (filters.groupId && !filters.query && !filters.tags && !filters.syncStatus) {
-      // 只需要按分组筛选时，使用索引
-      return db.getAllFromIndex('tabs', 'by-group', filters.groupId);
+      // 只需要按分组筛选时，使用索引，并排除已删除的Tab
+      const tabs = await db.getAllFromIndex('tabs', 'by-group', filters.groupId);
+      return tabs.filter(t => !t.deletedAt);
     }
 
     if (filters.syncStatus && !filters.query && !filters.tags && !filters.groupId) {
@@ -248,6 +509,11 @@ class TabService {
       tabs = await db.getAllFromIndex('tabs', 'by-sync-status', filters.syncStatus);
     } else {
       tabs = await db.getAll('tabs');
+    }
+
+    // 排除已归档到History的Tab（默认行为）
+    if (!filters.includeDeleted) {
+      tabs = tabs.filter(tab => !tab.deletedAt);
     }
 
     // 按标签筛选（内存过滤）
@@ -288,21 +554,24 @@ class TabService {
   }
 
   /**
-   * 获取统计信息
+   * 获取统计信息（排除已归档到History的Tab）
    */
   async getStats(): Promise<TabStats> {
     const db = await getDB();
     const tabs = await db.getAll('tabs');
 
+    // 排除已删除的tabs
+    const activeTabs = tabs.filter(tab => !tab.deletedAt);
+
     const stats: TabStats = {
-      total: tabs.length,
+      total: activeTabs.length,
       synced: 0,
       pending: 0,
       error: 0,
       byGroup: {},
     };
 
-    for (const tab of tabs) {
+    for (const tab of activeTabs) {
       // 同步状态统计
       if (tab.syncStatus === 'synced') {
         stats.synced++;
@@ -430,6 +699,96 @@ class TabService {
 
       await tx.done;
     }
+  }
+
+  /**
+   * 清理Inbox中超过7天未处理的Tab
+   * 将这些Tab自动移动到History，并标记为"风吹来的"
+   * @returns 返回被清理的Tab数量
+   */
+  async cleanupOldInboxTabs(): Promise<number> {
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000; // 7天��毫秒数
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    const db = await getDB();
+    const tabs = await db.getAll('tabs');
+
+    // 筛选出需要清理的Inbox tabs
+    const tabsToCleanup = tabs.filter(tab => {
+      // 在Inbox中且未被删除且未被风吹过
+      if (tab.groupId || tab.deletedAt || tab.cleanedByWind) {
+        return false;
+      }
+      // 检查是否超过7天（使用inboxAt或createdAt作为fallback）
+      const inboxTime = tab.inboxAt || tab.createdAt;
+      return now - inboxTime > SEVEN_DAYS;
+    });
+
+    if (tabsToCleanup.length === 0) {
+      return 0;
+    }
+
+    // 批量更新：将tabs移到History
+    const tx = db.transaction('tabs', 'readwrite');
+    const store = tx.objectStore('tabs');
+
+    for (const tab of tabsToCleanup) {
+      // 保存原始分组（Inbox没有分组，所以originalGroupId为undefined）
+      tab.originalGroupId = undefined;
+      // 设置删除时间戳
+      tab.deletedAt = now;
+      // 标记为被风吹来的
+      tab.cleanedByWind = true;
+      // 更新时间戳
+      tab.updatedAt = now;
+      tab.syncStatus = 'pending';
+
+      await store.put(tab);
+      cleanedCount++;
+    }
+
+    await tx.done;
+    return cleanedCount;
+  }
+
+  /**
+   * 永久删除History中超过30天的Tab
+   * @returns 返回被永久删除的Tab数量
+   */
+  async cleanupOldHistoryTabs(): Promise<number> {
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000; // 30天的毫秒数
+    const now = Date.now();
+    let deletedCount = 0;
+
+    const db = await getDB();
+    const tabs = await db.getAll('tabs');
+
+    // 筛选出需要永久删除的History tabs
+    const tabsToDelete = tabs.filter(tab => {
+      // 必须是在History中（已删除）
+      if (!tab.deletedAt) {
+        return false;
+      }
+      // 检查是否在History中超过30天
+      return now - tab.deletedAt > THIRTY_DAYS;
+    });
+
+    if (tabsToDelete.length === 0) {
+      return 0;
+    }
+
+    // 批量永久删除
+    const tx = db.transaction('tabs', 'readwrite');
+    const store = tx.objectStore('tabs');
+
+    for (const tab of tabsToDelete) {
+      await store.delete(tab.id);
+      deletedCount++;
+    }
+
+    await tx.done;
+    return deletedCount;
   }
 }
 

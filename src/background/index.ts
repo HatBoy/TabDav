@@ -296,14 +296,14 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
   },
 
   [MESSAGE_TYPES.TAB_DELETE]: async (payload: unknown) => {
-    const payloadData = payload as { id?: string; ids?: string[] };
+    const payloadData = payload as { id?: string; ids?: string[]; status?: 'completed' | 'deleted' };
 
     // 支持单个删除 (id) 和批量删除 (ids)
     if (payloadData.ids) {
       // 批量删除
       let allSuccess = true;
       for (const id of payloadData.ids) {
-        const success = await tabService.delete(id);
+        const success = await tabService.delete(id, 'deleted');
         if (!success) {
           allSuccess = false;
         }
@@ -313,8 +313,8 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
       }
       return { success: allSuccess };
     } else if (payloadData.id) {
-      // 单个删除
-      const success = await tabService.delete(payloadData.id);
+      // 单个删除（支持可选的status参数）
+      const success = await tabService.delete(payloadData.id, payloadData.status);
       if (success) {
         await updateBadge();
       }
@@ -331,9 +331,35 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
   },
 
   [MESSAGE_TYPES.TAB_RESTORE]: async (payload: unknown) => {
-    const { url } = payload as { id: string; url: string; title: string };
-    await chrome.tabs.create({ url, active: true });
-    return { success: true };
+    const { id } = payload as { id: string };
+    const success = await tabService.restore(id);
+    if (success) {
+      await updateBadge();
+    }
+    return { success };
+  },
+
+  [MESSAGE_TYPES.TAB_PERMANENT_DELETE]: async (payload: unknown) => {
+    const payloadData = payload as { id?: string; ids?: string[] };
+
+    // 支持单个删除 (id) 和批量删除 (ids)
+    if (payloadData.ids) {
+      // 批量永久删除
+      const count = await tabService.bulkPermanentDelete(payloadData.ids);
+      if (count > 0) {
+        await updateBadge();
+      }
+      return { success: true, count };
+    } else if (payloadData.id) {
+      // 单个永久删除
+      const success = await tabService.permanentDelete(payloadData.id);
+      if (success) {
+        await updateBadge();
+      }
+      return { success };
+    }
+
+    return { success: false };
   },
 
   [MESSAGE_TYPES.TAB_MOVE_TO_GROUP]: async (payload: unknown) => {
@@ -342,16 +368,13 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
     // 规范化 groupId：空字符串转换为 undefined，表示"移出分组"
     const normalizedGroupId = groupId === '' ? undefined : groupId;
 
-    // 使用 tabService 更新所有 tab 的 groupId
+    // 使用 tabService 更新所有 tab 的 groupId（会自动更新相关分组的tabCount）
     for (const tabId of tabIds) {
       await tabService.update({
         id: tabId,
         groupId: normalizedGroupId,
       });
     }
-
-    // 刷新所有分组的 tabCount，确保计数正确
-    await groupService.refreshAllTabCounts();
 
     return { success: true };
   },
@@ -370,6 +393,24 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
     }
     const tabs = await tabService.getAll();
     return { success: true, data: tabs };
+  },
+
+  [MESSAGE_TYPES.TAB_CLEANUP_INBOX]: async () => {
+    // 清理Inbox中超过7天未处理的tabs
+    const cleanedCount = await tabService.cleanupOldInboxTabs();
+    if (cleanedCount > 0) {
+      await updateBadge();
+    }
+    return { success: true, count: cleanedCount };
+  },
+
+  [MESSAGE_TYPES.TAB_CLEANUP_HISTORY]: async () => {
+    // 永久删除History中超过30天的tabs
+    const deletedCount = await tabService.cleanupOldHistoryTabs();
+    if (deletedCount > 0) {
+      await updateBadge();
+    }
+    return { success: true, count: deletedCount };
   },
 
   // 分组操作

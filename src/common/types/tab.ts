@@ -16,6 +16,16 @@ export interface TabItem {
   favicon?: string;
   /** 所属分组ID */
   groupId?: string;
+  /** 删除/归档时间戳（为null表示未删除，有值表示已归档到History） */
+  deletedAt?: number;
+  /** 删除前的分组ID（用于恢复到原来的位置） */
+  originalGroupId?: string;
+  /** 完成状态（用于标记"已完成"或"已删除"，undefined表示未完成） */
+  status?: 'completed' | 'deleted';
+  /** 进入Inbox的时间戳（用于清理机制计时） */
+  inboxAt?: number;
+  /** 是否被自动清理机制移到History（风吹来的） */
+  cleanedByWind?: boolean;
   /** 收藏时间戳 */
   createdAt: number;
   /** 更新时间戳 */
@@ -67,6 +77,8 @@ export interface TabSearchFilters {
   syncStatus?: 'synced' | 'pending' | 'error';
   sortBy?: 'createdAt' | 'title' | 'lastVisited';
   sortOrder?: 'asc' | 'desc';
+  /** 是否包含已删除的Tab（默认false，即排除已归档到History的Tab） */
+  includeDeleted?: boolean;
 }
 
 /**

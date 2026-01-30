@@ -106,6 +106,16 @@ export interface TabData {
   title: string;
   favicon?: string;
   groupId?: string;
+  /** 删除/归档时间戳（为null表示未删除，有值表示已归档到History） */
+  deletedAt?: number;
+  /** 删除前的分组ID（用于恢复到原来的位置） */
+  originalGroupId?: string;
+  /** 进入Inbox的时间戳（用于清理机制计时） */
+  inboxAt?: number;
+  /** 是否被自动清理机制移到History（风吹来的） */
+  cleanedByWind?: boolean;
+  /** 完成状态（用于标记"已完成"或"已删除"，undefined表示未完成） */
+  status?: 'completed' | 'deleted';
   createdAt: number;
   updatedAt: number;
   lastVisited?: number;
@@ -120,6 +130,8 @@ export interface GroupData {
   id: string;
   name: string;
   color?: string;
+  /** 列表类型（用于区分active list和buffer list） */
+  listType?: 'action' | 'buffer';
   createdAt: number;
   updatedAt: number;
 }

@@ -2,6 +2,8 @@
 
 <div align="center">
 
+**Stop Hoarding. Start Flowing.**
+**The Browser Buffer for Your Second Brain.**
 **Sync your tabs, own your data.**
 
 <p align="center">
@@ -24,6 +26,16 @@ Unlike other "Read It Later" tools or tab managers that lock your data in propri
 
 **Your data stays with you. Secure, private, and free.**
 
+## 📖 Redefining Tab Management
+
+**TabDav** has evolved. In v2.0, we reimagined it from a simple "Bookmark Syncer" to a **"Browser Buffer"** designed for knowledge workers who use tools like Notion, Obsidian, or Logseq.
+
+We believe your browser shouldn't be a graveyard for information.
+* **TabDav is RAM**: For temporary buffering, triaging, and processing.
+* **Your Notes App is HDD**: For permanent storage.
+
+**The goal is turnover, not storage.**
+
 ## ✨ Key Features
 
 * **🔒 Privacy First**: Zero tracking. Your browsing history and saved tabs are never sent to our servers. They live strictly on *your* WebDAV server.
@@ -31,6 +43,29 @@ Unlike other "Read It Later" tools or tab managers that lock your data in propri
 * **⚡ Productivity Toolkit**: Supports **Tab Grouping** for better organization, **Markdown Export** for your notes (Obsidian/Notion ready), and **Custom Themes** (Light/Dark).
 * **🌍 Multi-language Support**: Fully localized for English, Simplified/Traditional Chinese, Japanese, German, French, Spanish, Portuguese, and Russian.
 * **🚀 Lightweight**: No bloatware. A clean, efficient UI focused purely on productivity.
+
+## ✨ Core Features (v4.0)
+
+### 1. 📥 Inbox & Natural Entropy
+Your Inbox is a temporary landing zone. To prevent clutter, we introduced a visual aging mechanism based on **Natural Entropy**:
+* **< 3 days**: Text is clear and vibrant, indicated by a green leaf.
+
+* **3 - 7 days**: Tabs wither, indicated by a yellow leaf.
+
+* **> 7 days**: The system automatically archives them to history (indicated by a gray wind), keeping the Inbox clean.
+
+### 2. ⚡ Dual-Mode Lists
+Not all tabs are created equal. Create lists with specific intents:
+
+#### ✅ Action List (For Doing)
+* **Metaphor**: Tasks, Jira tickets, Bug fixes.
+* **Interaction - "Open & Drop"**: Clicking the title opens the tab and **immediately removes it** from the list. It pushes you to focus on the task.
+
+
+#### 📖 Buffer List (For Reading)
+* **Metaphor**: Resources, Reading list, Research materials.
+* **Interaction - "Open & Keep"**: Clicking the title opens the tab but keeps it in the list for reference.
+* **Harvest - "Export & Clear"**: A dedicated button to **Copy all items as Markdown** and clear the list instantly. Paste perfectly into Obsidian/Notion.
 
 ## 📸 Screenshots
 

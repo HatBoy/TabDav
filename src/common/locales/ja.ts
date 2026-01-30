@@ -42,9 +42,24 @@ export default {
     export: 'エクスポート',
     move: '移動',
     uncategorized: '未分類',
+    // 視図タイプ（三段階ワークフロー）
+    view: {
+      inbox: '受信トレイ',
+      lists: 'リスト',
+      history: '履歴',
+    },
+    // 視図の説明
+    viewDescription: {
+      inbox: '未分類のタブの一時保管場所',
+      lists: '整理されたアクションリストとバッファリスト',
+      history: '閉じたタブのアーカイブ（読み取り専用）',
+    },
     exportMode: {
       standard: '標準リストモード',
       todo: 'Todoタスクモード',
+      confirmDeleteTitle: 'エクスポートしたタブを削除',
+      confirmDeleteMessage: '{count}個のエクスポートしたタブをリストから削除しますか？',
+      confirmDeleteHint: 'タブは履歴に移動され、後で復元できます。',
     },
     selectMode: {
       selected: '{{count}} 件選択',
@@ -59,6 +74,9 @@ export default {
       syncError: '同期失敗',
       moveToGroup: 'グループに移動',
       removeFromGroup: 'グループから除外',
+      copy: 'コピー',
+      copyAsMarkdown: 'Markdownとしてコピー',
+      copySuccess: 'コピーしました！',
       delete: '削除',
       deleteConfirm: '「{title}」を削除してもよろしいですか？',
       batchDeleteConfirm: '選択した{count}個のタブを削除してもよろしいですか？',
@@ -72,6 +90,24 @@ export default {
       delete: 'グループを削除',
       deleteConfirm: 'グループ「{name}」を削除してもよろしいですか？',
       deleteHint: 'このグループの{count}個のタブはグループ解除され、「すべて」に保持されます。',
+    },
+    list: {
+      create: '新しいリスト',
+      namePlaceholder: 'リスト名を入力...',
+      selectMode: 'リストモードを選択',
+      mode: {
+        action: 'アクションリスト',
+        actionDesc: '開いて消去',
+        buffer: 'バッファリスト',
+        bufferDesc: '後で読む',
+      },
+    },
+    history: {
+      restore: '復元',
+      permanentDelete: '削除',
+      clearAll: 'すべてクリア',
+      clearAllConfirm: 'すべての履歴をクリアしますか？この操作はすべての履歴項目を永久に削除します。',
+      clearAllHint: 'この操作は取り消せません',
     },
   },
   options: {

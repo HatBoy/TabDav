@@ -42,9 +42,24 @@ export default {
     export: 'Export',
     move: 'Move',
     uncategorized: 'Uncategorized',
+    // View types (三阶段工作流)
+    view: {
+      inbox: 'Inbox',
+      lists: 'Lists',
+      history: 'History',
+    },
+    // View descriptions
+    viewDescription: {
+      inbox: 'Temporary holding area for unsorted tabs',
+      lists: 'Your organized action and buffer lists',
+      history: 'Archive of closed tabs (read-only)',
+    },
     exportMode: {
       standard: 'Standard List Mode',
       todo: 'Todo Task Mode',
+      confirmDeleteTitle: 'Delete Exported Tabs',
+      confirmDeleteMessage: 'Delete {count} exported tab(s) from the list?',
+      confirmDeleteHint: 'The tabs will be moved to History and can be restored later.',
     },
     selectMode: {
       selected: '{count} selected',
@@ -59,10 +74,15 @@ export default {
       syncError: 'Sync failed',
       moveToGroup: 'Move to group',
       removeFromGroup: 'Remove from group',
+      copy: 'Copy',
+      copyAsMarkdown: 'Copy as Markdown',
+      copySuccess: 'Copied!',
       delete: 'Delete',
       deleteConfirm: 'Are you sure you want to delete "{title}"?',
       batchDeleteConfirm: 'Are you sure you want to delete {count} selected tabs?',
       deleteHint: 'This action cannot be undone',
+      completed: 'Task completed',
+      markAsComplete: 'Click to complete',
     },
     group: {
       create: 'New Group',
@@ -72,6 +92,24 @@ export default {
       delete: 'Delete Group',
       deleteConfirm: 'Are you sure you want to delete group "{name}"?',
       deleteHint: '{count} tabs in this group will be ungrouped and kept in "All".',
+    },
+    list: {
+      create: 'New List',
+      namePlaceholder: 'Enter list name...',
+      selectMode: 'Select List Mode',
+      mode: {
+        action: 'Action List',
+        actionDesc: 'Open & Drop',
+        buffer: 'Buffer List',
+        bufferDesc: 'Read Later',
+      },
+    },
+    history: {
+      restore: 'Restore',
+      permanentDelete: 'Delete',
+      clearAll: 'Clear All',
+      clearAllConfirm: 'Are you sure you want to clear all history? This will permanently delete all history items.',
+      clearAllHint: 'This action cannot be undone',
     },
   },
   options: {

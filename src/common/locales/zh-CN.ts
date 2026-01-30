@@ -42,9 +42,24 @@ export default {
     export: '导出',
     move: '移动',
     uncategorized: '未分类',
+    // 视图类型（三阶段工作流）
+    view: {
+      inbox: '收件箱',
+      lists: '清单',
+      history: '历史',
+    },
+    // 视图描述
+    viewDescription: {
+      inbox: '未分类标签的临时存放区',
+      lists: '您的动作清单和缓冲清单',
+      history: '已关闭标签的归档（只读）',
+    },
     exportMode: {
       standard: '标准清单模式',
       todo: '待办任务模式',
+      confirmDeleteTitle: '删除已导出的标签页',
+      confirmDeleteMessage: '是否从列表中删除 {count} 个已导出的标签页？',
+      confirmDeleteHint: '标签页将被移动到历史记录，之后可以恢复。',
     },
     selectMode: {
       selected: '已选 {count} 项',
@@ -59,10 +74,15 @@ export default {
       syncError: '同步失败',
       moveToGroup: '移动到分组',
       removeFromGroup: '取消分组',
+      copy: '复制',
+      copyAsMarkdown: '复制为 Markdown',
+      copySuccess: '已复制！',
       delete: '删除',
       deleteConfirm: '确定要删除「{title}」吗？',
       batchDeleteConfirm: '确定要删除选中的 {count} 个标签吗？',
       deleteHint: '此操作不可恢复',
+      completed: '任务已完成',
+      markAsComplete: '点击完成',
     },
     group: {
       create: '新建分组',
@@ -72,6 +92,24 @@ export default {
       delete: '删除分组',
       deleteConfirm: '确定要删除分组「{name}」吗？',
       deleteHint: '分组内的 {count} 个标签将取消分组关系，保留在"全部"中。',
+    },
+    list: {
+      create: '新建清单',
+      namePlaceholder: '请输入清单名称...',
+      selectMode: '选择清单模式',
+      mode: {
+        action: '待办清单',
+        actionDesc: '打开即焚',
+        buffer: '待阅清单',
+        bufferDesc: '稍后阅读',
+      },
+    },
+    history: {
+      restore: '恢复',
+      permanentDelete: '删除',
+      clearAll: '一键清空',
+      clearAllConfirm: '确定要清空所有历史记录吗？此操作将永久删除所有历史项目。',
+      clearAllHint: '此操作不可恢复',
     },
   },
   options: {

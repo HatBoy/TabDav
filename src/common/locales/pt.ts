@@ -42,9 +42,24 @@ export default {
     export: 'Exportar',
     move: 'Mover',
     uncategorized: 'Sem categoria',
+    // Tipos de visualização (fluxo de trabalho de três fases)
+    view: {
+      inbox: 'Caixa de entrada',
+      lists: 'Listas',
+      history: 'Histórico',
+    },
+    // Descrições das visualizações
+    viewDescription: {
+      inbox: 'Área de armazenamento temporário para abas não classificadas',
+      lists: 'Suas listas de ações e buffers organizados',
+      history: 'Arquivo de abas fechadas (somente leitura)',
+    },
     exportMode: {
       standard: 'Modo Lista Padrão',
       todo: 'Modo Tarefas Pendentes',
+      confirmDeleteTitle: 'Excluir abas exportadas',
+      confirmDeleteMessage: 'Excluir {count} aba(s) exportada(s) da lista?',
+      confirmDeleteHint: 'As abas serão movidas para o histórico e poderão ser restauradas depois.',
     },
     selectMode: {
       selected: '{{count}} sel.',
@@ -59,6 +74,9 @@ export default {
       syncError: 'Erro',
       moveToGroup: 'Mover para grupo',
       removeFromGroup: 'Remover do grupo',
+      copy: 'Copiar',
+      copyAsMarkdown: 'Copiar como Markdown',
+      copySuccess: 'Copiado!',
       delete: 'Excluir',
       deleteConfirm: 'Tem certeza de que deseja excluir "{title}"?',
       batchDeleteConfirm: 'Tem certeza de que deseja excluir as {count} abas selecionadas?',
@@ -72,6 +90,24 @@ export default {
       delete: 'Excluir Grupo',
       deleteConfirm: 'Tem certeza de que deseja excluir o grupo "{name}"?',
       deleteHint: '{count} abas neste grupo serão desagrupadas e mantidas em "Todas".',
+    },
+    list: {
+      create: 'Nova Lista',
+      namePlaceholder: 'Digite o nome da lista...',
+      selectMode: 'Selecione o modo da lista',
+      mode: {
+        action: 'Lista de Ações',
+        actionDesc: 'Abrir e Descartar',
+        buffer: 'Lista de Buffer',
+        bufferDesc: 'Ler Depois',
+      },
+    },
+    history: {
+      restore: 'Restaurar',
+      permanentDelete: 'Excluir',
+      clearAll: 'Limpar Tudo',
+      clearAllConfirm: 'Tem certeza de que deseja limpar todo o histórico? Esta ação excluirá permanentemente todos os itens do histórico.',
+      clearAllHint: 'Esta ação não pode ser desfeita',
     },
   },
   options: {

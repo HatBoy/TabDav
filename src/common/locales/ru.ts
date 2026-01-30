@@ -42,9 +42,24 @@ export default {
     export: 'Экспорт',
     move: 'Переместить',
     uncategorized: 'Без категории',
+    // Типы представлений (трёхэтапный рабочий процесс)
+    view: {
+      inbox: 'Входящие',
+      lists: 'Списки',
+      history: 'История',
+    },
+    // Описания представлений
+    viewDescription: {
+      inbox: 'Временное хранилище для несортированных вкладок',
+      lists: 'Ваши организованные списки действий и буферы',
+      history: 'Архив закрытых вкладок (только для чтения)',
+    },
     exportMode: {
       standard: 'Режим стандартного списка',
       todo: 'Режим задач Todo',
+      confirmDeleteTitle: 'Удалить экспортированные вкладки',
+      confirmDeleteMessage: 'Удалить {count} экспортированную(ых) вкладку(ки) из списка?',
+      confirmDeleteHint: 'Вкладки будут перемещены в историю и их можно будет восстановить позже.',
     },
     selectMode: {
       selected: 'Выбрано: {{count}}',
@@ -59,6 +74,9 @@ export default {
       syncError: 'Ошибка',
       moveToGroup: 'Переместить в группу',
       removeFromGroup: 'Удалить из группы',
+      copy: 'Копировать',
+      copyAsMarkdown: 'Копировать как Markdown',
+      copySuccess: 'Скопировано!',
       delete: 'Удалить',
       deleteConfirm: 'Вы уверены, что хотите удалить "{title}"?',
       batchDeleteConfirm: 'Вы уверены, что хотите удалить выбранные вкладки ({count})?',
@@ -72,6 +90,24 @@ export default {
       delete: 'Удалить группу',
       deleteConfirm: 'Вы уверены, что хотите удалить группу "{name}"?',
       deleteHint: '{count} вкладок в этой группе будут разгруппированы и сохранены в "Все".',
+    },
+    list: {
+      create: 'Новый список',
+      namePlaceholder: 'Введите название списка...',
+      selectMode: 'Выберите режим списка',
+      mode: {
+        action: 'Список действий',
+        actionDesc: 'Открыть и удалить',
+        buffer: 'Буферный список',
+        bufferDesc: 'Прочитать позже',
+      },
+    },
+    history: {
+      restore: 'Восстановить',
+      permanentDelete: 'Удалить',
+      clearAll: 'Очистить Всё',
+      clearAllConfirm: 'Вы уверены, что хотите очистить всю историю? Это действие окончательно удалит все элементы истории.',
+      clearAllHint: 'Это действие невозможно отменить',
     },
   },
   options: {

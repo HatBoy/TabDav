@@ -398,18 +398,23 @@ export class SyncEngine {
           id: groupData.id, // 使用远程 ID
           name: groupData.name,
           color: groupData.color,
+          listType: groupData.listType as any,
           createdAt: groupData.createdAt,
           updatedAt: groupData.updatedAt,
           tabCount: 0,
         };
         await db.put('groups', group);
       } else if (existing.updatedAt !== groupData.updatedAt) {
-        // 现有分组且有更新，更新
-        await groupService.update({
-          id: existing.id,
+        // 现有分组且有更新，更新所有字段（包括listType）
+        const updated: Group = {
+          ...existing,
           name: groupData.name,
           color: groupData.color,
-        });
+          listType: groupData.listType as any,
+          createdAt: groupData.createdAt,
+          updatedAt: groupData.updatedAt,
+        };
+        await db.put('groups', updated);
       }
     }
 
@@ -419,39 +424,78 @@ export class SyncEngine {
       const existing = existingTabMap.get(urlKey);
 
       if (!existing) {
-        // 新Tab，创建
-        await tabService.add({
+        // 新Tab，直接创建（包括deletedAt等所有字段）
+        const newTab: TabItem = {
+          id: tabData.id,
           url: tabData.url,
           title: tabData.title,
           favicon: tabData.favicon,
           groupId: tabData.groupId,
+          deletedAt: tabData.deletedAt,
+          originalGroupId: tabData.originalGroupId,
+          inboxAt: tabData.inboxAt,
+          cleanedByWind: tabData.cleanedByWind,
+          status: tabData.status,
+          createdAt: tabData.createdAt,
+          updatedAt: tabData.updatedAt,
+          lastVisited: tabData.lastVisited,
           note: tabData.note,
           tags: tabData.tags,
-        });
+          syncStatus: 'synced',
+          syncError: undefined,
+        };
+        await db.put('tabs', newTab);
       } else if (existing.updatedAt !== tabData.updatedAt) {
-        // 现有Tab且有更新，更新
-        await tabService.update({
-          id: existing.id,
+        // 现有Tab且有更新，更新所有字段（包括deletedAt等）
+        const updatedTab: TabItem = {
+          ...existing,
           url: tabData.url,
           title: tabData.title,
           favicon: tabData.favicon,
           groupId: tabData.groupId,
+          deletedAt: tabData.deletedAt,
+          originalGroupId: tabData.originalGroupId,
+          inboxAt: tabData.inboxAt,
+          cleanedByWind: tabData.cleanedByWind,
+          status: tabData.status,
+          createdAt: tabData.createdAt,
+          updatedAt: tabData.updatedAt,
+          lastVisited: tabData.lastVisited,
           note: tabData.note,
           tags: tabData.tags,
-        });
+          syncStatus: 'synced',
+          syncError: undefined,
+        };
+        await db.put('tabs', updatedTab);
       }
     }
 
     // 删除本地存在但合并结果中不存在的Tabs（三路合并判定应该删除的）
     const mergedTabUrls = new Set(data.tabs.map(t => t.url.toLowerCase()));
-    const tabsToDelete: string[] = [];
+    const activeTabsToDelete: string[] = [];  // 未删除的tab（需要移到history）
+    const deletedTabsToPurge: string[] = [];   // 已删除的tab（需要永久删除）
+
     for (const [urlKey, existingTab] of existingTabMap) {
       if (!mergedTabUrls.has(urlKey)) {
-        tabsToDelete.push(existingTab.id);
+        // 根据tab的删除状态选择不同的删除方式
+        if (existingTab.deletedAt) {
+          // 已删除的tab（在history中），需要永久删除
+          deletedTabsToPurge.push(existingTab.id);
+        } else {
+          // 未删除的tab，移到history
+          activeTabsToDelete.push(existingTab.id);
+        }
       }
     }
-    if (tabsToDelete.length > 0) {
-      await tabService.bulkDelete(tabsToDelete);
+
+    // 批量处理未删除的tab（移到history）
+    if (activeTabsToDelete.length > 0) {
+      await tabService.bulkDelete(activeTabsToDelete);
+    }
+
+    // 批量永久删除已删除的tab
+    if (deletedTabsToPurge.length > 0) {
+      await tabService.bulkPermanentDelete(deletedTabsToPurge);
     }
 
     // 删除本地存在但合并结果中不存在的Groups
@@ -661,6 +705,11 @@ export class SyncEngine {
       title: tab.title,
       favicon: tab.favicon,
       groupId: tab.groupId,
+      deletedAt: tab.deletedAt,
+      originalGroupId: tab.originalGroupId,
+      inboxAt: tab.inboxAt,
+      cleanedByWind: tab.cleanedByWind,
+      status: tab.status,
       createdAt: tab.createdAt,
       updatedAt: tab.updatedAt,
       lastVisited: tab.lastVisited,
@@ -677,6 +726,7 @@ export class SyncEngine {
       id: group.id,
       name: group.name,
       color: group.color,
+      listType: group.listType,
       createdAt: group.createdAt,
       updatedAt: group.updatedAt,
     };

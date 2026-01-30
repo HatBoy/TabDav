@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TabDav - Tab Manager & Sync",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Cross-device tab management browser extension with WebDav sync. Continue reading anywhere, anytime.",
   "author": "TabDav",
   "homepage_url": "https://github.com/HatBoy/TabDav",

@@ -92,40 +92,94 @@
       />
     </div>
 
-    <!-- 分组标签栏 -->
-    <div class="group-tabs">
-      <button
-        :class="['group-tab', { active: !selectedGroupId }]"
-        @click="selectedGroupId = undefined"
-      >
-        {{ $t('popup.groupAll') }} ({{ stats.total }})
-      </button>
-      <button
-        v-for="group in groups"
-        :key="group.id"
-        :class="['group-tab', { active: selectedGroupId === group.id }]"
-        @click="selectedGroupId = group.id"
-      >
-        <span v-if="group.color" class="group-dot" :style="{ backgroundColor: group.color }"></span>
-        <span class="group-name">{{ group.name }}</span>
-        <span class="group-count">({{ groupTabCounts[group.id] || 0 }})</span>
+    <!-- 统一的工具栏：视图控制器 + 子导航（单行布局） -->
+    <div class="unified-toolbar">
+      <!-- 左侧：视图选择器 + 添加按钮 -->
+      <div class="toolbar-left">
+        <ViewSelector v-model="currentView" />
+        <!-- "+" 按钮 - 仅在 Lists 视图显示 -->
         <button
-          class="group-delete-btn"
-          @click.stop="confirmDeleteGroup(group)"
-          :title="$t('popup.group.delete')"
+          v-if="currentView === 'lists'"
+          class="add-list-btn"
+          @click="showCreateGroup = true"
+          :title="$t('popup.group.create')"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
-      </button>
-      <button class="group-tab add-group" @click="showCreateGroup = true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </button>
+      </div>
+
+      <!-- 右侧：Inbox视图的数量徽章 或 Lists视图的分组标签 -->
+      <div v-if="currentView === 'inbox'" class="toolbar-right">
+        <div class="toolbar-divider"></div>
+        <!-- Inbox Count Badge -->
+        <div
+          class="inbox-count-badge"
+          :class="{
+            'is-empty': inboxTabCount === 0,
+            'is-normal': inboxTabCount > 0 && inboxTabCount <= 20,
+            'is-warning': inboxTabCount > 20
+          }"
+        >
+          <template v-if="inboxTabCount === 0">
+            <!-- Empty state: green checkmark -->
+            <svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </template>
+          <template v-else>
+            <span class="badge-count">{{ inboxTabCount }}</span>
+          </template>
+        </div>
+      </div>
+
+      <div v-else-if="currentView === 'lists'" class="toolbar-right">
+        <div class="toolbar-divider"></div>
+        <div class="group-tabs-inline">
+          <template v-if="groups.length > 0">
+            <template v-for="(group, index) in groups" :key="group.id">
+              <div v-if="index > 0" class="group-tab-divider"></div>
+              <button
+                :class="['group-tab-inline', { active: selectedGroupId === group.id }]"
+                @click="selectedGroupId = group.id"
+              >
+                <span
+                  class="group-dot-inline"
+                  :style="{ backgroundColor: getGroupDotColor(group) }"
+                ></span>
+                <span class="group-name">{{ group.name }}</span>
+                <span class="tab-count">({{ groupTabCounts[group.id] || 0 }})</span>
+                <button
+                  class="group-delete-btn-inline"
+                  @click.stop="confirmDeleteGroup(group)"
+                  :title="$t('popup.group.delete')"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </button>
+            </template>
+          </template>
+        </div>
+      </div>
+
+      <!-- History视图：一键清空按钮 -->
+      <div v-else-if="currentView === 'history'" class="toolbar-right">
+        <div class="toolbar-divider"></div>
+        <button class="clear-history-btn" @click="confirmClearHistory" :title="$t('popup.history.clearAll')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <line x1="10" y1="11" x2="14" y2="11" />
+            <line x1="10" y1="15" x2="14" y2="15" />
+          </svg>
+          <span>{{ $t('popup.history.clearAll') }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Tab列表 -->
@@ -144,13 +198,14 @@
             fill-opacity="0.5"
           />
         </svg>
-        <p class="empty-title">{{ $t('popup.noTabs') }}</p>
-        <p class="empty-subtitle">{{ $t('popup.emptySubtitle') }}</p>
+        <p class="empty-title">{{ getEmptyTitle() }}</p>
+        <p class="empty-subtitle">{{ getEmptySubtitle() }}</p>
       </div>
 
       <div
         v-for="tab in filteredTabs"
         :key="tab.id"
+        :data-tab-id="tab.id"
         :class="['tab-item', { selected: selectedTabIds.includes(tab.id) }]"
         @click="handleTabClick(tab)"
       >
@@ -177,17 +232,27 @@
           <!-- 第二行：域名 + 分组 + 时间 -->
           <div class="tab-meta-row">
             <span class="tab-url">{{ formatUrl(tab.url) }}</span>
-            <template v-if="tab.groupId">
+            <!-- 在Lists视图（待办清单/待阅清单）中不显示分组信息，因为已经在分组中了 -->
+            <!-- 在Inbox视图中不显示分组信息，因为Inbox中的tab没有分组 -->
+            <!-- 在History视图中显示原始分组信息 -->
+            <template v-if="currentView === ViewType.HISTORY && tab.originalGroupId">
               <span class="meta-separator">·</span>
               <span v-for="group in groups" :key="group.id">
-                <span v-if="group.id === tab.groupId" class="tab-group-info">
+                <span v-if="group.id === tab.originalGroupId" class="tab-group-info">
                   <span
-                    v-if="group.color"
                     class="group-dot"
-                    :style="{ backgroundColor: group.color }"
+                    :style="{ backgroundColor: getGroupDotColor(group) }"
                   ></span>
                   <span class="group-name">{{ group.name }}</span>
                 </span>
+              </span>
+            </template>
+            <template v-else-if="currentView === ViewType.HISTORY && !tab.originalGroupId">
+              <!-- 从Inbox删除的tab，显示灰色圆点+Inbox -->
+              <span class="meta-separator">·</span>
+              <span class="tab-group-info">
+                <span class="group-dot" style="background-color: #9ca3af"></span>
+                <span class="group-name">Inbox</span>
               </span>
             </template>
             <span class="meta-separator">·</span>
@@ -215,65 +280,163 @@
                 />
               </svg>
             </span>
+            <!-- Inbox清理机制图标 -->
+            <template v-if="currentView === ViewType.INBOX">
+              <!-- 绿色叶子：<3天 -->
+              <span
+                v-if="getInboxDays(tab) < 3"
+                class="leaf-icon green-leaf ml-2"
+                title="新收藏"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                  <path d="M17,8C8,10,5.9,16.17,3.82,21.34L5.71,22l1-2.3A4.49,4.49,0,0,0,8,20C19,20,22,3,22,3,21,5,14,5.25,9,6.25S2,11.5,2,13.5a6.22,6.22,0,0,0,1.75,3.75C7,8,17,8,17,8Z"/>
+                </svg>
+              </span>
+              <!-- 黄色枯萎叶子：3-7天 -->
+              <span
+                v-else-if="getInboxDays(tab) < 7"
+                class="leaf-icon yellow-leaf ml-2"
+                title="需要处理"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                  <path d="M17,8C8,10,5.9,16.17,3.82,21.34L5.71,22l1-2.3A4.49,4.49,0,0,0,8,20C19,20,22,3,22,3,21,5,14,5.25,9,6.25S2,11.5,2,13.5a6.22,6.22,0,0,0,1.75,3.75C7,8,17,8,17,8Z"/>
+                </svg>
+              </span>
+            </template>
+            <!-- History风吹图标 -->
+            <span
+              v-if="currentView === ViewType.HISTORY && tab.cleanedByWind"
+              class="wind-icon ml-2"
+              title="自动清理"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+              </svg>
+            </span>
           </div>
         </div>
         <!-- 操作按钮（悬停显示） -->
         <div v-if="mode === 'normal'" class="tab-actions">
-          <!-- 分组下拉菜单 -->
-          <div class="tab-action-dropdown">
+          <!-- History视图：显示恢复和永久删除按钮 -->
+          <template v-if="currentView === ViewType.HISTORY">
+            <!-- 恢复按钮 -->
             <button
-              class="tab-action-btn"
-              :class="{ disabled: groups.length === 0 }"
-              :title="tab.groupId ? $t('popup.tab.removeFromGroup') : $t('popup.tab.moveToGroup')"
-              @click.stop="groups.length > 0 && toggleTabGroupDropdown(tab.id)"
+              class="tab-action-btn success"
+              :title="$t('popup.history.restore')"
+              @click.stop="restoreTab(tab.id)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 7v6h6" />
+                <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+              </svg>
+            </button>
+            <!-- 永久删除按钮 -->
+            <button
+              class="tab-action-btn danger"
+              :title="$t('popup.history.permanentDelete')"
+              @click.stop="permanentDeleteTab(tab.id)"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path
-                  d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                  d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M3 6l2 2M17 6l-2 2M10 11v6M14 11v6"
                 />
-                <polyline points="11 12 15 16 19 12" />
               </svg>
             </button>
-            <div
-              v-if="activeTabGroupDropdown === tab.id && groups.length > 0"
-              class="tab-group-dropdown-menu"
+          </template>
+          <!-- 非History视图：显示复制、移动到分组和删除按钮 -->
+          <template v-else>
+            <!-- 复制按钮 - 只在buffer list中显示 -->
+            <button
+              v-if="currentView === ViewType.LISTS && currentGroup?.listType === ListType.BUFFER"
+              class="tab-action-btn"
+              :title="$t('popup.tab.copyAsMarkdown')"
+              @click.stop="copyTabAsMarkdown(tab)"
             >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </button>
+            <!-- 分组下拉菜单 -->
+            <div class="tab-action-dropdown">
               <button
-                v-for="group in groups"
-                :key="group.id"
-                :class="['dropdown-item', { active: tab.groupId === group.id }]"
-                @click.stop="moveTabToGroup(tab.id, group.id)"
+                class="tab-action-btn"
+                :class="{ disabled: groups.length === 0 }"
+                :title="tab.groupId ? $t('popup.tab.removeFromGroup') : $t('popup.tab.moveToGroup')"
+                @click.stop="groups.length > 0 && toggleTabGroupDropdown(tab.id)"
               >
-                <span
-                  v-if="group.color"
-                  class="dropdown-color-dot"
-                  :style="{ backgroundColor: group.color }"
-                ></span>
-                <span class="dropdown-item-text">{{ group.name }}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path
+                    d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                  />
+                  <polyline points="11 12 15 16 19 12" />
+                </svg>
               </button>
-              <button
-                v-if="tab.groupId"
-                class="dropdown-item"
-                @click.stop="moveTabToGroup(tab.id, undefined)"
+              <div
+                v-if="activeTabGroupDropdown === tab.id && groups.length > 0"
+                class="tab-group-dropdown-menu"
               >
-                <span class="dropdown-color-dot bg-gray-400"></span>
-                <span class="dropdown-item-text">{{ $t('popup.tab.removeFromGroup') }}</span>
-              </button>
+                <button
+                  v-for="group in groups"
+                  :key="group.id"
+                  :class="['dropdown-item', { active: tab.groupId === group.id }]"
+                  @click.stop="moveTabToGroup(tab.id, group.id)"
+                >
+                  <!-- 待办清单：显示对号图标 -->
+                  <svg
+                    v-if="group.listType === ListType.ACTION"
+                    class="dropdown-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <!-- 待阅清单���显示书籍图标 -->
+                  <svg
+                    v-else-if="group.listType === ListType.BUFFER"
+                    class="dropdown-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                  </svg>
+                  <!-- 其他情况（兜底）：显示原色点 -->
+                  <span
+                    v-else-if="group.color"
+                    class="dropdown-color-dot"
+                    :style="{ backgroundColor: group.color }"
+                  ></span>
+                  <span class="dropdown-item-text">{{ group.name }}</span>
+                </button>
+                <button
+                  v-if="tab.groupId"
+                  class="dropdown-item"
+                  @click.stop="moveTabToGroup(tab.id, undefined)"
+                >
+                  <span class="dropdown-color-dot bg-gray-400"></span>
+                  <span class="dropdown-item-text">{{ $t('popup.tab.removeFromGroup') }}</span>
+                </button>
+              </div>
             </div>
-          </div>
-          <!-- 删除按钮 -->
-          <button
-            class="tab-action-btn danger"
-            :title="$t('common.delete')"
-            @click.stop="deleteTab(tab.id)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6" />
-              <path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-              />
-            </svg>
-          </button>
+            <!-- 删除按钮 -->
+            <button
+              class="tab-action-btn danger"
+              :title="$t('common.delete')"
+              @click.stop="deleteTab(tab.id)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                />
+              </svg>
+            </button>
+          </template>
         </div>
         <!-- 批量选择模式 -->
         <input
@@ -336,8 +499,8 @@
             />
           </svg>
         </button>
-        <!-- 导出按钮 -->
-        <div class="export-dropdown-container">
+        <!-- 导出按钮 - 只在待阅清单(BUFFER)中显示，待办清单(ACTION)屏蔽 -->
+        <div v-if="currentView === 'lists' && currentGroup?.listType === ListType.BUFFER" class="export-dropdown-container">
           <button
             :class="['export-btn', { disabled: isActionDisabled }]"
             @click="toggleExportDropdown"
@@ -403,8 +566,8 @@
             </button>
           </div>
         </div>
-        <!-- 移动按钮 -->
-        <div class="move-dropdown">
+        <!-- 移动按钮 - History视图不显示 -->
+        <div v-if="currentView !== 'history'" class="move-dropdown">
           <button
             :class="['move-btn', { disabled: isActionDisabled }]"
             @click="handleMoveButtonClick"
@@ -427,9 +590,33 @@
               class="dropdown-item"
               @click="batchMoveToGroup(group.id)"
             >
+              <!-- 待办清单：显示对号图标 -->
+              <svg
+                v-if="group.listType === ListType.ACTION"
+                class="dropdown-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <!-- 待阅清单：显示书籍图标 -->
+              <svg
+                v-else-if="group.listType === ListType.BUFFER"
+                class="dropdown-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
+              <!-- 其他情况：显示原色点 -->
               <span
-                v-if="group.color"
-                class="group-dot"
+                v-else-if="group.color"
+                class="dropdown-color-dot"
                 :style="{ backgroundColor: group.color }"
               ></span>
               {{ group.name }}
@@ -439,40 +626,59 @@
       </div>
     </footer>
 
-    <!-- 新建分组弹窗 -->
+    <!-- 新建清单弹窗 -->
     <div v-if="showCreateGroup" class="modal-overlay" @click.self="showCreateGroup = false">
-      <div class="modal modern-modal">
+      <div class="modal modern-modal modal-list-create">
         <div class="modal-header modern-modal-header">
-          <h3 class="modern-modal-title">{{ $t('popup.group.create') }}</h3>
+          <h3 class="modern-modal-title">{{ $t('popup.list.create') }}</h3>
         </div>
         <div class="modal-body modern-modal-body">
+          <!-- 名称输入 -->
           <input
             v-model="newGroupName"
             type="text"
             class="input modern-input"
             maxlength="30"
-            :placeholder="$t('popup.group.namePlaceholder')"
+            :placeholder="$t('popup.list.namePlaceholder')"
             @keyup.enter="createGroup"
           />
-          <div class="color-picker modern-color-picker">
-            <button
-              v-for="color in pastelColors"
-              :key="color"
-              :class="['color-option modern-color-option', { active: newGroupColor === color }]"
-              :style="{ backgroundColor: color }"
-              @click="newGroupColor = color"
-            >
-              <svg
-                v-if="newGroupColor === color"
-                class="color-check"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
+
+          <!-- 清单模式选择 -->
+          <div class="list-mode-selector">
+            <div class="mode-label">{{ $t('popup.list.selectMode') }}</div>
+            <div class="mode-cards">
+              <!-- 动作清单卡片 -->
+              <div
+                :class="['mode-card', { active: newListType === 'action' }]"
+                @click="newListType = 'action'"
               >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </button>
+                <div class="mode-card-icon mode-icon-action">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <div class="mode-card-content">
+                  <div class="mode-card-title">{{ $t('popup.list.mode.action') }}</div>
+                  <div class="mode-card-desc">{{ $t('popup.list.mode.actionDesc') }}</div>
+                </div>
+              </div>
+              <!-- 待阅清单卡片 -->
+              <div
+                :class="['mode-card', { active: newListType === 'buffer' }]"
+                @click="newListType = 'buffer'"
+              >
+                <div class="mode-card-icon mode-icon-buffer">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                  </svg>
+                </div>
+                <div class="mode-card-content">
+                  <div class="mode-card-title">{{ $t('popup.list.mode.buffer') }}</div>
+                  <div class="mode-card-desc">{{ $t('popup.list.mode.bufferDesc') }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer modern-modal-footer">
@@ -563,22 +769,96 @@
       </div>
     </div>
 
+    <!-- 清空History确认弹窗 -->
+    <div
+      v-if="showClearHistoryModal"
+      class="modal-overlay"
+      @click.self="showClearHistoryModal = false"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3>{{ $t('popup.history.clearAll') }}</h3>
+          <button class="modal-close" @click="showClearHistoryModal = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-warning">
+            {{ $t('popup.history.clearAllConfirm') }}
+          </p>
+          <p class="delete-hint">
+            {{ $t('popup.history.clearAllHint') }}
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="showClearHistoryModal = false">
+            {{ $t('common.cancel') }}
+          </button>
+          <button class="btn danger" @click="executeClearHistory">
+            {{ $t('common.confirm') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 导出后删除确认弹窗 -->
+    <div
+      v-if="showExportConfirmModal"
+      class="modal-overlay"
+      @click.self="showExportConfirmModal = false"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3>{{ $t('popup.exportMode.confirmDeleteTitle') }}</h3>
+          <button class="modal-close" @click="showExportConfirmModal = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-warning">
+            {{ $t('popup.exportMode.confirmDeleteMessage', { count: exportedTabs.length }) }}
+          </p>
+          <p class="delete-hint">
+            {{ $t('popup.exportMode.confirmDeleteHint') }}
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="showExportConfirmModal = false">
+            {{ $t('common.cancel') }}
+          </button>
+          <button class="btn danger" @click="executeExportDelete">
+            {{ $t('common.confirm') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast 通知组件 -->
     <Toast ref="toastRef" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, inject } from 'vue';
 import { formatRelativeTime, getDomain } from '../common/utils/date';
 import { MESSAGE_TYPES } from '../common/constants';
-import { GROUP_COLORS } from '../common/types/group';
+import { GROUP_COLORS, ViewType, ListType } from '../common/types/group';
 import type { TabItem } from '../common/types/tab';
 import type { Group } from '../common/types/group';
 import { themeManager } from '../common/services/themeService';
-import { t } from '../common/i18n';
+import { t as rawT } from '../common/i18n';
 import { initTheme, setupThemeSync } from '../common/theme';
 import Toast from './components/Toast.vue';
+import ViewSelector from './components/ViewSelector.vue';
+
+// Get t function from i18n injection
+const t = inject<(key: string, params?: Record<string, string | number>) => string>('t', rawT);
 
 // Color palette for modern modal (Notion/Linear style)
 const COLORS = [
@@ -599,6 +879,7 @@ const COLORS = [
 // 状态
 const searchQuery = ref('');
 const selectedGroupId = ref<string | undefined>();
+const currentView = ref<ViewType>(ViewType.INBOX); // Default to Inbox view
 const tabs = ref<TabItem[]>([]);
 const groups = ref<Group[]>([]);
 const theme = ref<'light' | 'dark' | 'system'>('light');
@@ -608,6 +889,7 @@ const showGroupDropdown = ref(false);
 const showCreateGroup = ref(false);
 const newGroupName = ref('');
 const newGroupColor = ref(COLORS[0]); // Default to first color (blue-500)
+const newListType = ref<ListType>(ListType.ACTION); // Default to Action List
 const pastelColors = COLORS;
 const loaded = ref(false);
 const activeTabGroupDropdown = ref<string | null>(null);
@@ -625,6 +907,11 @@ const showDeleteTabModal = ref(false);
 const tabToDelete = ref<TabItem | null>(null);
 const isBatchDelete = ref(false); // 是否批量删除
 const batchDeleteCount = ref(0); // 批量删除数量
+const showClearHistoryModal = ref(false); // 清空History确认弹窗
+
+// 导出确认弹窗状态
+const showExportConfirmModal = ref(false);
+const exportedTabs = ref<TabItem[]>([]); // 已导出的tabs
 
 // 打开设置页面
 function openSettingsPage(): void {
@@ -790,6 +1077,38 @@ async function handleExport(mode: 'standard' | 'todo'): Promise<void> {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  // 待阅清单导出后，询问是否删除已导出的tabs
+  if (currentGroup.value?.listType === ListType.BUFFER) {
+    exportedTabs.value = tabsToExport;
+    showExportConfirmModal.value = true;
+  } else {
+    // 其他清单类型，直接清空选择并退出批量模式
+    selectedTabIds.value = [];
+    mode.value = 'normal';
+  }
+}
+
+// 执行导出后删除（从确认弹窗调用）
+async function executeExportDelete(): Promise<void> {
+  showExportConfirmModal.value = false;
+
+  // 将已导出的tabs移动到History
+  for (const tab of exportedTabs.value) {
+    await chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.TAB_DELETE,
+      payload: { id: tab.id, status: 'completed' },
+    });
+  }
+
+  // 重新加载数据
+  await loadData();
+  // 清空选择
+  selectedTabIds.value = [];
+  // 退出批量选择模式
+  mode.value = 'normal';
+  // 清空已导出的tabs
+  exportedTabs.value = [];
 }
 
 // 切换导出模式下拉菜单
@@ -800,16 +1119,23 @@ function toggleExportDropdown(): void {
 // 计算属性
 const isActionDisabled = computed(() => selectedTabIds.value.length === 0);
 
-// 分组标签数量映射
+// 分组标签数量映射（排除已归档到History的Tab）
 const groupTabCounts = computed(() => {
   const counts: Record<string, number> = {};
   const tabList = tabs.value || [];
   for (const tab of tabList) {
-    if (tab && tab.groupId) {
+    // 只统计未���除的Tab（排除已归档到History的Tab）
+    if (tab && tab.groupId && !tab.deletedAt) {
       counts[tab.groupId] = (counts[tab.groupId] || 0) + 1;
     }
   }
   return counts;
+});
+
+// Inbox Tab数量（排除已删除的Tab）
+const inboxTabCount = computed(() => {
+  const tabList = tabs.value || [];
+  return tabList.filter(tab => !tab.groupId && !tab.deletedAt).length;
 });
 
 const stats = computed(() => {
@@ -828,14 +1154,50 @@ const stats = computed(() => {
   return statsObj;
 });
 
+// Stats for Lists view (only tabs with groupId)
+const listStats = computed(() => {
+  const statsObj = { total: 0, synced: 0, pending: 0, error: 0 };
+  const tabList = tabs.value || [];
+  if (!Array.isArray(tabList)) return statsObj;
+
+  for (const tab of tabList) {
+    if (tab && typeof tab === 'object' && tab.groupId) {
+      statsObj.total++;
+      if (tab.syncStatus === 'synced') statsObj.synced++;
+      else if (tab.syncStatus === 'pending') statsObj.pending++;
+      else if (tab.syncStatus === 'error') statsObj.error++;
+    }
+  }
+  return statsObj;
+});
+
+// 当前选中的分组
+const currentGroup = computed(() => {
+  if (!selectedGroupId.value) return undefined;
+  return groups.value.find(g => g.id === selectedGroupId.value);
+});
+
 const filteredTabs = computed(() => {
   const tabList = tabs.value || [];
   let result: TabItem[] = Array.isArray(tabList) ? tabList : [];
 
-  if (selectedGroupId.value) {
-    result = result.filter(t => t.groupId === selectedGroupId.value);
+  // Filter based on current view
+  if (currentView.value === ViewType.INBOX) {
+    // Inbox: Show only uncategorized tabs that are NOT deleted
+    result = result.filter(t => !t.groupId && !t.deletedAt);
+  } else if (currentView.value === ViewType.LISTS) {
+    // Lists: Show tabs in groups (with groupId) that are NOT deleted
+    if (selectedGroupId.value) {
+      result = result.filter(t => t.groupId === selectedGroupId.value && !t.deletedAt);
+    } else {
+      result = result.filter(t => t.groupId && !t.deletedAt);
+    }
+  } else if (currentView.value === ViewType.HISTORY) {
+    // History: Show ONLY deleted/archived tabs (with deletedAt)
+    result = result.filter(t => t.deletedAt);
   }
 
+  // Apply search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     result = result.filter(
@@ -843,7 +1205,12 @@ const filteredTabs = computed(() => {
     );
   }
 
-  result.sort((a, b) => b.createdAt - a.createdAt);
+  // Sort by creation time (newest first) - for History, sort by deletedAt
+  result.sort((a, b) => {
+    const timeA = currentView.value === ViewType.HISTORY ? (a.deletedAt || a.createdAt) : a.createdAt;
+    const timeB = currentView.value === ViewType.HISTORY ? (b.deletedAt || b.createdAt) : b.createdAt;
+    return timeB - timeA;
+  });
   return result;
 });
 
@@ -874,6 +1241,34 @@ function getSyncStatusText(status: string): string {
   return statusMap[status] || status;
 }
 
+// Get empty state title based on current view
+function getEmptyTitle(): string {
+  if (currentView.value === ViewType.INBOX) {
+    return t('popup.noTabs');
+  } else if (currentView.value === ViewType.LISTS) {
+    return selectedGroupId.value ? t('popup.noTabs') : t('popup.group.create');
+  } else {
+    return t('popup.noTabs');
+  }
+}
+
+// Get empty state subtitle based on current view
+function getEmptySubtitle(): string {
+  if (currentView.value === ViewType.INBOX) {
+    return t('popup.emptySubtitle');
+  } else if (currentView.value === ViewType.LISTS) {
+    if (selectedGroupId.value) {
+      return t('popup.emptySubtitle');
+    } else {
+      return groups.value.length === 0
+        ? t('popup.viewDescription.lists')
+        : t('popup.emptySubtitle');
+    }
+  } else {
+    return t('popup.viewDescription.history');
+  }
+}
+
 function handleFaviconError(event: Event): void {
   const img = event.target as HTMLImageElement;
   img.style.display = 'none';
@@ -898,15 +1293,44 @@ function confirmBatchDelete(): void {
   showDeleteTabModal.value = true;
 }
 
+// 确认清空History
+function confirmClearHistory(): void {
+  showClearHistoryModal.value = true;
+}
+
+// 执行清空History（从确认弹窗调用）
+async function executeClearHistory(): Promise<void> {
+  // 获取所有History中的tab（deletedAt不为空的）
+  const historyTabs = tabs.value.filter(t => t.deletedAt);
+  const historyTabIds = historyTabs.map(t => t.id);
+
+  if (historyTabIds.length === 0) {
+    showClearHistoryModal.value = false;
+    return;
+  }
+
+  // 批量永久删除
+  await chrome.runtime.sendMessage({
+    type: MESSAGE_TYPES.TAB_PERMANENT_DELETE,
+    payload: { ids: historyTabIds },
+  });
+
+  showClearHistoryModal.value = false;
+  await loadData();
+}
+
 // 执行删除（从确认弹窗调用）
 async function executeDelete(): Promise<void> {
+  // 判断当前视图是否是History视图
+  const isHistoryView = currentView.value === ViewType.HISTORY;
+  const messageType = isHistoryView ? MESSAGE_TYPES.TAB_PERMANENT_DELETE : MESSAGE_TYPES.TAB_DELETE;
+
   if (isBatchDelete.value) {
     // 批量删除
     const ids = selectedTabIds.value;
-    tabs.value = tabs.value.filter(t => !ids.includes(t.id));
 
     await chrome.runtime.sendMessage({
-      type: MESSAGE_TYPES.TAB_DELETE,
+      type: messageType,
       payload: { ids },
     });
 
@@ -914,13 +1338,15 @@ async function executeDelete(): Promise<void> {
   } else if (tabToDelete.value) {
     // 单个删除
     const id = tabToDelete.value.id;
-    tabs.value = tabs.value.filter(t => t.id !== id);
     await chrome.runtime.sendMessage({
-      type: MESSAGE_TYPES.TAB_DELETE,
+      type: messageType,
       payload: { id },
     });
     activeTabGroupDropdown.value = null;
   }
+
+  // 重新加载数据以显示正确的状态
+  await loadData();
 
   // 关闭弹窗
   showDeleteTabModal.value = false;
@@ -930,6 +1356,18 @@ async function executeDelete(): Promise<void> {
 // Tab操作
 async function openTab(tab: TabItem | null): Promise<void> {
   if (!tab) return;
+
+  // Lists视图中的待办清单：打开页面并标记为已完成（移动到History）
+  // 待阅清单不自动删除
+  if (currentView.value === ViewType.LISTS && currentGroup.value?.listType === ListType.ACTION) {
+    // 先标记为已完成
+    await chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.TAB_DELETE,
+      payload: { id: tab.id, status: 'completed' },
+    });
+  }
+
+  // 打开页面
   await chrome.tabs.create({ url: tab.url, active: true });
   window.close();
 }
@@ -946,12 +1384,48 @@ async function deleteTab(id: string | undefined): Promise<void> {
     confirmDeleteTab(tab);
   } else {
     // 直接删除
-    tabs.value = tabs.value.filter(t => t.id !== id);
     await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.TAB_DELETE,
       payload: { id },
     });
+    // 重新加载数据以显示正确的状态（tabs会移动到History）
+    await loadData();
     activeTabGroupDropdown.value = null;
+  }
+}
+
+// History视图：恢复Tab
+async function restoreTab(id: string): Promise<void> {
+  await chrome.runtime.sendMessage({
+    type: MESSAGE_TYPES.TAB_RESTORE,
+    payload: { id },
+  });
+  await loadData();
+}
+
+// History视图：永久删除Tab
+async function permanentDeleteTab(id: string): Promise<void> {
+  await chrome.runtime.sendMessage({
+    type: MESSAGE_TYPES.TAB_PERMANENT_DELETE,
+    payload: { id },
+  });
+  await loadData();
+}
+
+// 复制Tab为Markdown格式
+async function copyTabAsMarkdown(tab: TabItem): Promise<void> {
+  try {
+    // 构建 Markdown 格式: [Title](URL)
+    const markdown = `[${tab.title}](${tab.url})`;
+
+    // 使用 Clipboard API 复制
+    await navigator.clipboard.writeText(markdown);
+
+    // 显示成功提示
+    toastRef.value?.success(t('popup.tab.copySuccess'));
+  } catch (error) {
+    console.error('Failed to copy:', error);
+    toastRef.value?.error('Copy failed');
   }
 }
 
@@ -1060,7 +1534,11 @@ async function createGroup(): Promise<void> {
   try {
     const response = await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.GROUP_CREATE,
-      payload: { name: newGroupName.value.trim(), color: newGroupColor.value },
+      payload: {
+        name: newGroupName.value.trim(),
+        color: newGroupColor.value,
+        listType: newListType.value,
+      },
     });
 
     if (response && (response as any).success && (response as any).data) {
@@ -1068,6 +1546,7 @@ async function createGroup(): Promise<void> {
       groups.value.push(group);
       newGroupName.value = '';
       newGroupColor.value = COLORS[0]; // Reset to first color (blue-500)
+      newListType.value = ListType.ACTION; // Reset to Action List
       showCreateGroup.value = false;
     } else {
       console.error('[DEBUG createGroup] 创建失败:', response);
@@ -1079,7 +1558,34 @@ async function createGroup(): Promise<void> {
 
 function getTabsInGroup(groupId: string | undefined): number {
   if (!groupId) return 0;
-  return tabs.value.filter(t => t.groupId === groupId).length;
+  // 排除已归档到History的Tab
+  return tabs.value.filter(t => t.groupId === groupId && !t.deletedAt).length;
+}
+
+function getGroupDotColor(group: Group): string {
+  // 根据清单类型返回对应的颜色
+  if (group.listType === ListType.ACTION) {
+    return '#22c55e'; // 绿色 - 待办清单
+  }
+  if (group.listType === ListType.BUFFER) {
+    return '#3b82f6'; // 蓝色 - 待阅清单
+  }
+  // 没有类型或旧数据，使用自定义颜色或默认灰色
+  return group.color || '#9ca3af';
+}
+
+// 获取History视图中tab的原始分组
+function getOriginalGroup(tab: TabItem): Group | undefined {
+  if (!tab.originalGroupId) return undefined;
+  return groups.value.find(g => g.id === tab.originalGroupId);
+}
+
+// 计算tab在inbox中存放的天数
+function getInboxDays(tab: TabItem): number {
+  // 优先使用inboxAt，如果没有则使用createdAt作为fallback
+  const inboxTime = tab.inboxAt || tab.createdAt;
+  const days = Math.floor((Date.now() - inboxTime) / (24 * 60 * 60 * 1000));
+  return Math.max(0, days);
 }
 
 function confirmDeleteGroup(group: Group): void {
@@ -1097,11 +1603,12 @@ async function deleteGroup(): Promise<void> {
     });
 
     if (response && (response as any).success) {
-      // 从列表中移除分组
-      groups.value = groups.value.filter(g => g.id !== groupToDelete.value!.id);
-      // 如果当前选中的分组被删除，重置选中状态
+      // 重新加载数据以获取更新后的tabs（groupId已设为undefined，回归Inbox）
+      await loadData();
+
+      // 如果当前选中的分组被删除，选中第一个剩余分组（如果有）
       if (selectedGroupId.value === groupToDelete.value!.id) {
-        selectedGroupId.value = undefined;
+        selectedGroupId.value = groups.value.length > 0 ? groups.value[0].id : undefined;
       }
       showDeleteGroupModal.value = false;
       groupToDelete.value = null;
@@ -1209,6 +1716,34 @@ async function loadData(): Promise<void> {
     theme.value = 'light';
   }
 
+  // 执行Inbox清理：自动将超过7天未处理的tabs移到History
+  try {
+    const cleanupResponse = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TAB_CLEANUP_INBOX });
+    if (cleanupResponse?.success && (cleanupResponse as any).count > 0) {
+      // 如果有tabs被清理，重新加载数据
+      const tabResponse = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TAB_GET_ALL });
+      if (tabResponse?.success && Array.isArray(tabResponse?.data)) {
+        tabs.value = tabResponse.data;
+      }
+    }
+  } catch (e) {
+    console.error('Inbox清理失败:', e);
+  }
+
+  // 执行History清理：永久删除超过30天的tabs
+  try {
+    const historyCleanupResponse = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TAB_CLEANUP_HISTORY });
+    if (historyCleanupResponse?.success && (historyCleanupResponse as any).count > 0) {
+      // 如果有tabs被永久删除，重新加载数据
+      const tabResponse = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TAB_GET_ALL });
+      if (tabResponse?.success && Array.isArray(tabResponse?.data)) {
+        tabs.value = tabResponse.data;
+      }
+    }
+  } catch (e) {
+    console.error('History清理失败:', e);
+  }
+
   loaded.value = true;
 }
 
@@ -1232,6 +1767,20 @@ watch(
     themeManager.setTheme(newTheme);
   }
 );
+
+// 监听视图变化，自动选择分组
+watch(
+  () => currentView.value,
+  (newView) => {
+    if (newView === ViewType.LISTS) {
+      // 切换到 Lists 视图时，自动选中第一个分组（如果有）
+      selectedGroupId.value = groups.value.length > 0 ? groups.value[0].id : undefined;
+    } else {
+      // 切换到其他视图时，重置分组选择
+      selectedGroupId.value = undefined;
+    }
+  }
+);
 </script>
 
 <style>
@@ -1249,7 +1798,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem; /* px-4 py-3 - compact spacing */
+  padding: var(--spacing-3) var(--spacing-4);
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color-light);
   flex-shrink: 0;
@@ -1258,33 +1807,39 @@ watch(
 .header-left {
   display: flex;
   align-items: center;
-  gap: 0.625rem; /* ml-2.5 equivalent */
+  gap: var(--spacing-2);
 }
 
-/* Premium Brand Logo - Mini Version (w-8 h-8 = 32px) */
+/* Premium Brand Logo - Modern Version */
 .brand-logo-mini {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 3px 0 rgba(var(--theme-primary-500), 0.2);
+  box-shadow: var(--shadow-button);
   flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.brand-logo-mini:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-button-hover);
 }
 
 .brand-logo-mini svg {
-  width: 1.25rem; /* w-5 */
-  height: 1.25rem;
-  color: #ffffff;
+  width: 18px;
+  height: 18px;
+  color: var(--text-inverse);
 }
 
 .app-title {
-  font-size: 1.125rem; /* text-lg */
-  font-weight: 700; /* font-bold */
-  color: #111827; /* text-gray-900 */
-  letter-spacing: -0.025em; /* tracking-tight */
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
@@ -1307,23 +1862,30 @@ watch(
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-1);
 }
 
 .header-btn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   color: var(--text-secondary);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .header-btn:hover {
   background-color: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.header-btn:active {
+  transform: scale(0.96);
 }
 
 .header-btn svg {
@@ -1344,22 +1906,24 @@ watch(
   animation: spin 1s linear infinite;
 }
 
-/* 同步角标 */
+/* 同步角标 - Modern Badge */
 .sync-badge-dot {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 0;
+  right: 0;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: 16px;
   text-align: center;
-  color: white;
+  color: var(--text-inverse);
   background-color: var(--color-error);
   border-radius: var(--radius-full);
   z-index: 1;
+  box-shadow: var(--shadow-xs);
+  border: 2px solid var(--bg-primary);
 }
 
 @keyframes spin {
@@ -1379,100 +1943,318 @@ watch(
 /* ========== 搜索栏 ========== */
 .search-bar {
   position: relative;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background-color: var(--bg-secondary);
+  padding: var(--spacing-2) var(--spacing-4);
+  background-color: var(--bg-primary);
   flex-shrink: 0;
 }
 
 .search-icon {
   position: absolute;
-  left: calc(var(--spacing-lg) + var(--spacing-sm));
+  left: calc(var(--spacing-4) + var(--spacing-2));
   top: 50%;
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
   color: var(--text-tertiary);
   pointer-events: none;
+  transition: color var(--transition-fast);
 }
 
 .search-input {
   width: 100%;
-  height: 32px;
-  padding: 0 var(--spacing-md) 0 36px;
+  height: var(--input-height-md);
+  padding: 0 var(--spacing-3) 0 40px;
   font-size: var(--font-size-sm);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+}
+
+.search-input:hover {
+  background-color: var(--bg-primary);
+  border-color: var(--color-primary-200);
 }
 
 .search-input:focus {
+  outline: none;
+  background-color: var(--bg-primary);
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.search-input:focus + .search-icon {
+  color: var(--color-primary);
 }
 
 .search-input:disabled {
   background-color: var(--bg-tertiary);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
-/* ========== 分组标签栏 ========== */
-.group-tabs {
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ========== 统一工具栏（单行布局） ========== */
+.unified-toolbar {
   display: flex;
-  gap: 4px;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  overflow-x: auto;
-  background-color: transparent;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+/* 左侧：视图选择器 + 添加按钮 */
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
   flex-shrink: 0;
 }
 
-.group-tab {
-  display: inline-flex;
+/* 右侧：分组标签栏 */
+.toolbar-right {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  background-color: transparent;
-  border-radius: var(--radius-full);
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-  border: none;
-  cursor: pointer;
+  gap: var(--spacing-2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.group-tab:hover {
+/* 工具栏分隔线 */
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--border-color);
+  flex-shrink: 0;
+}
+
+/* Inbox Count Badge */
+.inbox-count-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 16px;
+  border-radius: 16px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  min-width: 48px;
+}
+
+/* Normal state (1-20 tabs): light green pill */
+.inbox-count-badge.is-normal {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.inbox-count-badge .badge-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Empty state (0 tabs): green checkmark, transparent background */
+.inbox-count-badge.is-empty {
+  background-color: transparent;
+  color: var(--color-success, #22c55e);
+}
+
+.inbox-count-badge.is-empty .badge-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Warning state (> 20 tabs): orange pill */
+.inbox-count-badge.is-warning {
+  background-color: var(--color-warning-light, #fed7aa);
+  color: var(--color-warning, #ea580c);
+}
+
+/* 内联分组标签栏 */
+.group-tabs-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.group-tabs-inline::-webkit-scrollbar {
+  display: none;
+}
+
+/* 内联分组标签 - 紧凑的文字链接风格 */
+.group-tab-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.group-tab-inline:hover {
   background-color: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.group-tab.active {
-  background-color: var(--color-primary-light);
+.group-tab-inline.active {
+  font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
-  font-weight: var(--font-weight-medium);
+  background-color: var(--color-primary-light);
 }
 
-.group-dot {
-  width: 8px;
-  height: 8px;
+/* 标签计数 - 更紧凑 */
+.group-tab-inline .tab-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-left: 2px;
+}
+
+.group-tab-inline.active .tab-count {
+  color: var(--color-primary);
+  opacity: 0.8;
+}
+
+/* 分组标签分隔符 */
+.group-tab-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-color);
+  flex-shrink: 0;
+}
+
+/* 内联分组圆点 */
+.group-dot-inline {
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
 
-.group-name {
-  flex-shrink: 0;
-}
-
-.group-count {
-  flex-shrink: 0;
+/* 内联删除按钮 - 仅悬停显示 */
+.group-delete-btn-inline {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
   color: var(--text-tertiary);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-left: 2px;
+  padding: 0;
+  opacity: 0;
 }
 
-.group-tab.active .group-count {
+.group-tab-inline:hover .group-delete-btn-inline {
+  opacity: 1;
+}
+
+.group-delete-btn-inline:hover {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.group-delete-btn-inline svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* 新建列表按钮 */
+.add-list-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.add-list-btn:hover {
+  background-color: var(--color-primary-light);
   color: var(--color-primary);
-  opacity: 0.8;
+  border-color: var(--color-primary-200);
+}
+
+.add-list-btn:active {
+  transform: scale(0.96);
+}
+
+.add-list-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 清空History按钮 */
+.clear-history-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.clear-history-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.clear-history-btn:hover {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+[data-theme='dark'] .clear-history-btn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: #ef4444;
+}
+
+.clear-history-btn:active {
+  transform: scale(0.96);
 }
 
 .group-tab.add-group {
@@ -1518,47 +2300,52 @@ watch(
 .tab-list {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-1) 0;
 }
 
+/* Empty State - Modern Design */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-xl);
+  padding: var(--spacing-8) var(--spacing-6);
   color: var(--text-tertiary);
   text-align: center;
 }
 
 .empty-illustration {
-  width: 96px;
-  height: 96px;
-  margin-bottom: var(--spacing-md);
+  width: 88px;
+  height: 88px;
+  margin-bottom: var(--spacing-4);
   color: var(--bg-tertiary);
+  opacity: 0.8;
 }
 
 .empty-state .empty-title {
   margin: 0;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
 }
 
 .empty-state .empty-subtitle {
-  margin: var(--spacing-xs) 0 0;
+  margin: var(--spacing-1) 0 0;
   font-size: var(--font-size-sm);
   color: var(--text-tertiary);
+  line-height: var(--line-height-base);
 }
 
+/* Tab Item - Modern Card Design */
 .tab-item {
   display: flex;
   align-items: flex-start;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: all var(--transition-fast);
   border-bottom: 1px solid var(--border-color-light);
+  position: relative;
 }
 
 .tab-item:last-child {
@@ -1566,7 +2353,7 @@ watch(
 }
 
 .tab-item:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--bg-secondary);
 }
 
 .tab-item.selected {
@@ -1574,25 +2361,28 @@ watch(
 }
 
 .tab-favicon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   margin-top: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .tab-favicon-placeholder {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   margin-top: 2px;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
 }
 
 .tab-favicon-placeholder svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   color: var(--text-tertiary);
 }
 
@@ -1601,22 +2391,23 @@ watch(
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  gap: 2px;
+  gap: var(--spacing-1);
 }
 
 .tab-title {
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: var(--line-height-tight);
 }
 
 .tab-meta-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-1);
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
   flex-wrap: wrap;
@@ -1626,6 +2417,7 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 200px;
 }
 
 .meta-separator {
@@ -1643,6 +2435,7 @@ watch(
 .tab-group-info .group-dot {
   width: 6px;
   height: 6px;
+  border-radius: 50%;
 }
 
 .group-name {
@@ -1659,11 +2452,11 @@ watch(
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-left: var(--spacing-xs);
+  margin-left: var(--spacing-1);
 }
 
 .sync-status-icon.pending {
-  color: var(--text-tertiary);
+  color: #9ca3af;
 }
 
 .sync-status-icon.error {
@@ -1685,11 +2478,35 @@ watch(
   animation: pulse-opacity 2s ease-in-out infinite;
 }
 
-/* 操作按钮 - 默认隐藏，悬停显示 */
+/* Inbox清理机制图标 */
+.leaf-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.leaf-icon.green-leaf {
+  color: #22c55e; /* 绿色 - 新收藏 */
+}
+
+.leaf-icon.yellow-leaf {
+  color: #eab308; /* 黄色 - 需要处理 */
+}
+
+.wind-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #9ca3af; /* 灰色 - 被风吹来的 */
+}
+
+/* 操作按钮 - 悬停显示，Modern Design */
 .tab-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--spacing-1);
   opacity: 0;
   transition: opacity var(--transition-fast);
   flex-shrink: 0;
@@ -1705,8 +2522,11 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--text-tertiary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
@@ -1832,78 +2652,71 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  background-color: white;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  background-color: var(--bg-primary);
   border-top: 1px solid var(--border-color-light);
   flex-shrink: 0;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
-/* 暗色模式下的底部栏背景 */
-[data-theme='dark'] .app-footer {
-  background-color: var(--bg-primary);
-  border-top-color: var(--border-color);
-}
-
-/* 暗色模式下的品牌样式 */
-[data-theme='dark'] .app-title {
-  color: #f9fafb;
-}
-
-[data-theme='dark'] .brand-logo-mini {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
-  box-shadow: 0 1px 3px 0 rgba(var(--theme-primary-500), 0.3);
-}
-
+/* Footer Buttons - Modern Design */
 .footer-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: var(--spacing-1);
+  padding: 0 var(--spacing-3);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-lg);
   transition: all var(--transition-fast);
   white-space: nowrap;
-  height: 36px;
+  height: var(--button-height-md);
   box-sizing: border-box;
+  cursor: pointer;
+  border: none;
 }
 
 .footer-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
+/* Primary Button - Solid, Modern */
 .footer-btn.primary {
   background-color: var(--color-primary);
-  color: white;
-  border: none;
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-button);
 }
 
 .footer-btn.primary:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-button-hover);
+  transform: translateY(-1px);
+}
+
+.footer-btn.primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-button);
 }
 
 .footer-btn.primary.large {
   flex: 1;
 }
 
-.footer-btn.primary.large svg {
-  width: 14px;
-  height: 14px;
-}
-
+/* Secondary Button - Outlined, Modern */
 .footer-btn.secondary {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-xs);
   flex: 1;
 }
 
 .footer-btn.secondary:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--bg-secondary);
+  border-color: var(--color-primary-200);
 }
 
 .footer-btn.ghost {
@@ -1930,6 +2743,7 @@ watch(
 .footer-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none !important;
 }
 
 /* ========== 底部操作栏 (Action Bar) ========== */
@@ -2382,6 +3196,153 @@ watch(
   stroke-linejoin: round;
 }
 
+/* ========== 清单模式选择器 ========== */
+.modal-list-create {
+  max-width: 420px;
+}
+
+.list-mode-selector {
+  margin-top: 16px;
+}
+
+.mode-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+[data-theme='dark'] .mode-label {
+  color: #9ca3af;
+}
+
+.mode-cards {
+  display: flex;
+  gap: 12px;
+}
+
+.mode-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme='dark'] .mode-card {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+.mode-card:hover {
+  border-color: #d1d5db;
+  background-color: #f9fafb;
+}
+
+[data-theme='dark'] .mode-card:hover {
+  border-color: #4b5563;
+  background-color: #374151;
+}
+
+.mode-card.active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+[data-theme='dark'] .mode-card.active {
+  border-color: #3b82f6;
+  background-color: #1e3a5f;
+}
+
+/* Action Mode - Green accent */
+.mode-card.active:has(.mode-icon-action) {
+  border-color: #22c55e;
+  background-color: #f0fdf4;
+}
+
+[data-theme='dark'] .mode-card.active:has(.mode-icon-action) {
+  border-color: #22c55e;
+  background-color: #14532d;
+}
+
+/* Buffer Mode - Blue accent */
+.mode-card.active:has(.mode-icon-buffer) {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+[data-theme='dark'] .mode-card.active:has(.mode-icon-buffer) {
+  border-color: #3b82f6;
+  background-color: #1e3a5f;
+}
+
+.mode-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.mode-icon-action {
+  background-color: #dcfce7;
+  color: #22c55e;
+}
+
+[data-theme='dark'] .mode-icon-action {
+  background-color: #14532d;
+  color: #4ade80;
+}
+
+.mode-icon-buffer {
+  background-color: #dbeafe;
+  color: #3b82f6;
+}
+
+[data-theme='dark'] .mode-icon-buffer {
+  background-color: #1e3a5f;
+  color: #60a5fa;
+}
+
+.mode-card-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mode-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mode-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.3;
+}
+
+[data-theme='dark'] .mode-card-title {
+  color: #f3f4f6;
+}
+
+.mode-card-desc {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+[data-theme='dark'] .mode-card-desc {
+  color: #9ca3af;
+}
+
 .modern-btn {
   display: inline-flex;
   align-items: center;
@@ -2591,17 +3552,72 @@ watch(
   margin: var(--spacing-sm) 0;
 }
 
-/* 暗色模式适配 */
-[data-theme='dark'] .tab-item {
-  background-color: var(--bg-secondary);
+/* ========== 暗色模式适配 ========== */
+[data-theme='dark'] .app-title {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .brand-logo-mini {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  box-shadow: var(--shadow-button);
 }
 
 [data-theme='dark'] .search-input {
-  background-color: var(--bg-tertiary);
+  background-color: var(--bg-secondary);
   border-color: var(--border-color);
+}
+
+[data-theme='dark'] .search-input:hover {
+  background-color: var(--bg-tertiary);
 }
 
 [data-theme='dark'] .search-input:focus {
   background-color: var(--bg-primary);
+}
+
+[data-theme='dark'] .unified-toolbar {
+  background-color: var(--bg-primary);
+}
+
+[data-theme='dark'] .toolbar-divider {
+  background-color: var(--border-color);
+}
+
+[data-theme='dark'] .group-tab-divider {
+  background-color: var(--border-color);
+}
+
+[data-theme='dark'] .group-tab-inline {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .group-tab-inline:hover {
+  background-color: var(--bg-hover);
+}
+
+[data-theme='dark'] .group-tab-inline.active {
+  background-color: var(--color-primary-light);
+}
+
+[data-theme='dark'] .add-list-btn {
+  background-color: transparent;
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .add-list-btn:hover {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary-200);
+}
+
+[data-theme='dark'] .tab-item {
+  background-color: var(--bg-primary);
+}
+
+[data-theme='dark'] .tab-item:hover {
+  background-color: var(--bg-secondary);
+}
+
+[data-theme='dark'] .tab-favicon-placeholder {
+  background-color: var(--bg-tertiary);
 }
 </style>

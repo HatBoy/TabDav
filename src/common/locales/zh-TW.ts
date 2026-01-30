@@ -42,9 +42,24 @@ export default {
     export: '匯出',
     move: '移動',
     uncategorized: '未分類',
+    // 視圖類型（三階段工作流）
+    view: {
+      inbox: '收件匣',
+      lists: '清單',
+      history: '歷史',
+    },
+    // 視圖描述
+    viewDescription: {
+      inbox: '未分類標籤的暫時存放區',
+      lists: '您的動作清單和緩衝清單',
+      history: '已關閉標籤的歸檔（唯讀）',
+    },
     exportMode: {
       standard: '標準清單模式',
       todo: '待辦任務模式',
+      confirmDeleteTitle: '刪除已匯出的分頁',
+      confirmDeleteMessage: '是否從列表中刪除 {count} 個已匯出的分頁？',
+      confirmDeleteHint: '分頁將被移動到歷史記錄，之後可以恢復。',
     },
     selectMode: {
       selected: '已選 {count} 項',
@@ -59,6 +74,9 @@ export default {
       syncError: '同步失敗',
       moveToGroup: '移動到群組',
       removeFromGroup: '取消群組',
+      copy: '複製',
+      copyAsMarkdown: '複製為 Markdown',
+      copySuccess: '已複製！',
       delete: '刪除',
       deleteConfirm: '確定要刪除「{title}」嗎？',
       batchDeleteConfirm: '確定要刪除選中的 {count} 個標籤嗎？',
@@ -72,6 +90,24 @@ export default {
       delete: '刪除分組',
       deleteConfirm: '確定要刪除分組「{name}」嗎？',
       deleteHint: '分組內的 {count} 個標籤將取消分組關係，保留在"全部"中。',
+    },
+    list: {
+      create: '新建清單',
+      namePlaceholder: '請輸入清單名稱...',
+      selectMode: '選擇清單模式',
+      mode: {
+        action: '待辦清單',
+        actionDesc: '打開即焚',
+        buffer: '待閱清單',
+        bufferDesc: '稍後閱讀',
+      },
+    },
+    history: {
+      restore: '恢復',
+      permanentDelete: '刪除',
+      clearAll: '一鍵清空',
+      clearAllConfirm: '確定要清空所有歷史記錄嗎？此操作將永久刪除所有歷史項目。',
+      clearAllHint: '此操作無法撤銷',
     },
   },
   options: {

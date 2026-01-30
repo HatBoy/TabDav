@@ -21,6 +21,7 @@ class GroupService {
       id: generateId(),
       name: input.name,
       color: input.color,
+      listType: input.listType,
       createdAt: now,
       updatedAt: now,
       tabCount: 0,
@@ -121,19 +122,31 @@ class GroupService {
 
   /**
    * 更新分组中的Tab数量
+   * 使用显式事务确保读写一致性
    */
   async updateTabCount(id: string): Promise<void> {
     const db = await getDB();
-    const group = await db.get('groups', id);
+    const tx = db.transaction(['groups', 'tabs'], 'readwrite');
+    const groupStore = tx.objectStore('groups');
+    const tabStore = tx.objectStore('tabs');
 
+    const group = await groupStore.get(id);
     if (!group) {
+      await tx.done;
       return;
     }
 
-    const tabs = await db.getAllFromIndex('tabs', 'by-group', id);
-    group.tabCount = tabs.length;
+    // 使用索引获取所有属于该分组的tabs，然后在同一事务中过滤
+    const index = tabStore.index('by-group');
+    const allTabs = await index.getAll(id);
+    const activeTabs = allTabs.filter(tab => !tab.deletedAt);
+
+    group.tabCount = activeTabs.length;
     group.updatedAt = Date.now();
-    await db.put('groups', group);
+    await groupStore.put(group);
+
+    // 等待事务完成确保数据已提交
+    await tx.done;
   }
 
   /**

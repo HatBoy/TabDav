@@ -42,9 +42,24 @@ export default {
     export: 'Exporter',
     move: 'Déplacer',
     uncategorized: 'Non catégorisé',
+    // Types de vues (flux de travail en trois étapes)
+    view: {
+      inbox: 'Boîte de réception',
+      lists: 'Listes',
+      history: 'Historique',
+    },
+    // Descriptions des vues
+    viewDescription: {
+      inbox: 'Zone de stockage temporaire pour les onglets non triés',
+      lists: 'Vos listes d\'actions et listes tampons organisées',
+      history: 'Archive des onglets fermés (lecture seule)',
+    },
     exportMode: {
       standard: 'Mode Liste Standard',
       todo: 'Mode Tâches Todo',
+      confirmDeleteTitle: 'Supprimer les onglets exportés',
+      confirmDeleteMessage: 'Supprimer {count} onglet(s) exporté(s) de la liste ?',
+      confirmDeleteHint: 'Les onglets seront déplacés vers l\'historique et pourront être restaurés plus tard.',
     },
     selectMode: {
       selected: '{{count}} sel.',
@@ -59,6 +74,9 @@ export default {
       syncError: 'Erreur',
       moveToGroup: 'Déplacer vers le groupe',
       removeFromGroup: 'Retirer du groupe',
+      copy: 'Copier',
+      copyAsMarkdown: 'Copier en Markdown',
+      copySuccess: 'Copié !',
       delete: 'Supprimer',
       deleteConfirm: 'Êtes-vous sûr de vouloir supprimer "{title}" ?',
       batchDeleteConfirm: 'Êtes-vous sûr de vouloir supprimer les {count} onglets sélectionnés ?',
@@ -72,6 +90,24 @@ export default {
       delete: 'Supprimer le Groupe',
       deleteConfirm: 'Êtes-vous sûr de vouloir supprimer le groupe "{name}"?',
       deleteHint: '{count} onglets de ce groupe seront déséconomisés et conservés dans "Tous".',
+    },
+    list: {
+      create: 'Nouvelle Liste',
+      namePlaceholder: 'Entrez le nom de la liste...',
+      selectMode: 'Sélectionner le mode de liste',
+      mode: {
+        action: 'Liste d\'Actions',
+        actionDesc: 'Ouvrir et Supprimer',
+        buffer: 'Liste Tampon',
+        bufferDesc: 'Lire Plus Tard',
+      },
+    },
+    history: {
+      restore: 'Restaurer',
+      permanentDelete: 'Supprimer',
+      clearAll: 'Tout Effacer',
+      clearAllConfirm: 'Voulez-vous vraiment effacer tout l\'historique ? Cette action supprimera définitivement tous les éléments de l\'historique.',
+      clearAllHint: 'Cette action est irréversible',
     },
   },
   options: {

@@ -570,7 +570,7 @@
             <!-- 2. Title & Version Badge -->
             <div class="brand-title">
               <h2 class="brand-name">TabDav</h2>
-              <span class="brand-version">v1.0.0</span>
+              <span class="brand-version">{{ appVersion }}</span>
             </div>
 
             <!-- 3. Slogan -->
@@ -676,6 +676,9 @@ import { themeManager } from '../common/services/themeService';
 import { LANGUAGE_OPTIONS, localeState } from '../common/i18n';
 import { t } from '../common/i18n';
 import { useTheme, setupThemeSync } from '../common/theme';
+
+// App version - read from manifest
+const appVersion = ref('v2.0.0');
 
 const settings = reactive<UserSettings>(DEFAULT_SETTINGS);
 const languageOptions = LANGUAGE_OPTIONS;
@@ -1104,6 +1107,10 @@ watch(
 );
 
 onMounted(async () => {
+  // Get app version from manifest
+  const manifest = chrome.runtime.getManifest();
+  appVersion.value = `v${manifest.version}`;
+
   const response = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_GET });
   if (response.success) {
     Object.assign(settings, response.data);

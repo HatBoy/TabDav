@@ -42,9 +42,24 @@ export default {
     export: 'Exportieren',
     move: 'Verschieben',
     uncategorized: 'Unkategorisiert',
+    // Ansichtstypen (Drei-Phasen-Workflow)
+    view: {
+      inbox: 'Posteingang',
+      lists: 'Listen',
+      history: 'Verlauf',
+    },
+    // Ansichtsbeschreibungen
+    viewDescription: {
+      inbox: 'Vorübergehender Aufbewahrungsort für unsortierte Tabs',
+      lists: 'Ihre organisierte Aktions- und Pufferlisten',
+      history: 'Archiv geschlossener Tabs (schreibgeschützt)',
+    },
     exportMode: {
       standard: 'Standard-Listenmodus',
       todo: 'Todo-Aufgabenmodus',
+      confirmDeleteTitle: 'Exportierte Tabs löschen',
+      confirmDeleteMessage: '{count} exportierte(s) Tab(s) aus der Liste löschen?',
+      confirmDeleteHint: 'Tabs werden in den Verlauf verschoben und können später wiederhergestellt werden.',
     },
     selectMode: {
       selected: '{{count}} ausgew.',
@@ -59,6 +74,9 @@ export default {
       syncError: 'Fehler',
       moveToGroup: 'In Gruppe verschieben',
       removeFromGroup: 'Aus Gruppe entfernen',
+      copy: 'Kopieren',
+      copyAsMarkdown: 'Als Markdown kopieren',
+      copySuccess: 'Kopiert!',
       delete: 'Löschen',
       deleteConfirm: 'Möchten Sie "{title}" wirklich löschen?',
       batchDeleteConfirm: 'Möchten Sie die ausgewählten {count} Tabs wirklich löschen?',
@@ -73,6 +91,24 @@ export default {
       deleteConfirm: 'Möchten Sie die Gruppe "{name}" wirklich löschen?',
       deleteHint:
         '{count} Tabs in dieser Gruppe werden aus der Gruppe entfernt und in "Alle" behalten.',
+    },
+    list: {
+      create: 'Neue Liste',
+      namePlaceholder: 'Listennamen eingeben...',
+      selectMode: 'Listenmodus auswählen',
+      mode: {
+        action: 'Aktionsliste',
+        actionDesc: 'Öffnen & Löschen',
+        buffer: 'Pufferliste',
+        bufferDesc: 'Später Lesen',
+      },
+    },
+    history: {
+      restore: 'Wiederherstellen',
+      permanentDelete: 'Löschen',
+      clearAll: 'Alle Löschen',
+      clearAllConfirm: 'Möchten Sie den gesamten Verlauf löschen? Dies werden alle Verlaufselemente dauerhaft gelöscht.',
+      clearAllHint: 'Diese Aktion kann nicht rückgängig gemacht werden',
     },
   },
   options: {

@@ -3,6 +3,28 @@
  */
 
 /**
+ * 视图类型枚举（三阶段工作流）
+ */
+export enum ViewType {
+  /** 收件箱 - 临时存放区，无分组 */
+  INBOX = 'inbox',
+  /** 清单 - 用户创建的列表 */
+  LISTS = 'lists',
+  /** 历史 - 归档的历史记录（只读） */
+  HISTORY = 'history',
+}
+
+/**
+ * 列表类型枚举（用于Lists视图中的分组）
+ */
+export enum ListType {
+  /** 动作清单 - 有序的任务列表 */
+  ACTION = 'action',
+  /** 缓冲清单 - 临时的收集区 */
+  BUFFER = 'buffer',
+}
+
+/**
  * 分组接口
  */
 export interface Group {
@@ -18,6 +40,8 @@ export interface Group {
   updatedAt: number;
   /** 包含的Tab数量（冗余字段，用于快速显示） */
   tabCount: number;
+  /** 列表类型（仅Lists视图中的分组有效） */
+  listType?: ListType;
 }
 
 /**
@@ -26,6 +50,7 @@ export interface Group {
 export interface CreateGroupInput {
   name: string;
   color?: string;
+  listType?: ListType;
 }
 
 /**
