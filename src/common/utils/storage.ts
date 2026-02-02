@@ -54,12 +54,49 @@ interface TabDavDB extends DBSchema {
       'by-timestamp': number;
     };
   };
+  classifyCache: {
+    key: string;
+    value: {
+      id: string;
+      url: string;
+      normalizedUrl: string;
+      groupId: string | null;
+      source: 'llm';
+      listsFingerprint: string;
+      timestamp: number;
+      hitCount: number;
+    };
+    indexes: {
+      'by-normalized-url': string;
+      'by-timestamp': number;
+      'by-fingerprint': string;
+    };
+  };
+  customRules: {
+    key: string;
+    value: {
+      id: string;
+      name: string;
+      pattern: string;
+      patternType: 'exact' | 'prefix' | 'domain' | 'regex';
+      targetGroupId: string | null;
+      priority: number;
+      enabled: boolean;
+      createdAt: number;
+      updatedAt: number;
+    };
+    indexes: {
+      'by-priority': number;
+      'by-enabled': number;
+      'by-created': number;
+    };
+  };
 }
 
 /** 数据库名称 */
 const DB_NAME = 'TabDav';
 /** 数据库版本 */
-const DB_VERSION = 1;
+const DB_VERSION = 3; // 升级到版本3，添加 custom_rules
 /** 数据库实例 */
 let dbInstance: IDBPDatabase<TabDavDB> | null = null;
 
@@ -120,6 +157,22 @@ export async function getDB(): Promise<IDBPDatabase<TabDavDB>> {
       if (!db.objectStoreNames.contains('pendingChanges')) {
         const pendingStore = db.createObjectStore('pendingChanges', { keyPath: 'id' });
         pendingStore.createIndex('by-timestamp', 'timestamp');
+      }
+
+      // 创建 classifyCache 表（版本2新增）
+      if (!db.objectStoreNames.contains('classifyCache')) {
+        const cacheStore = db.createObjectStore('classifyCache', { keyPath: 'id' });
+        cacheStore.createIndex('by-normalized-url', 'normalizedUrl');
+        cacheStore.createIndex('by-timestamp', 'timestamp');
+        cacheStore.createIndex('by-fingerprint', 'listsFingerprint');
+      }
+
+      // 创建 customRules 表（版本3新增）
+      if (!db.objectStoreNames.contains('customRules')) {
+        const ruleStore = db.createObjectStore('customRules', { keyPath: 'id' });
+        ruleStore.createIndex('by-priority', 'priority');
+        ruleStore.createIndex('by-enabled', 'enabled');
+        ruleStore.createIndex('by-created', 'createdAt');
       }
     },
   });

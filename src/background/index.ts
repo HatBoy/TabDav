@@ -10,6 +10,7 @@ import { settingsService } from '../common/services/settingsService';
 import { syncEngine } from '../common/services/syncEngine';
 import { dataIOService } from '../common/services/dataIOService';
 import { autoSyncService } from '../common/services/autoSync';
+import { customRuleService } from '../common/services/customRuleService';
 import { t, initBackgroundI18n } from '../common/i18n/background';
 import type { CreateTabInput, UpdateTabInput } from '../common/types/tab';
 import type { CreateGroupInput, UpdateGroupInput } from '../common/types/group';
@@ -28,7 +29,6 @@ const CONTEXT_MENU_COLLECT_ALL = 'tabdav-collect-all';
 async function showNotification(title: string, message: string): Promise<void> {
   // 检查 notifications API 是否可用
   if (typeof chrome === 'undefined' || !chrome.notifications) {
-    console.warn('chrome.notifications API 不可用');
     return;
   }
 
@@ -40,7 +40,7 @@ async function showNotification(title: string, message: string): Promise<void> {
       message,
     });
   } catch (error) {
-    console.error('显示通知失败:', error);
+    // Notification failed silently
   }
 }
 
@@ -98,21 +98,26 @@ async function updateBadge(): Promise<void> {
     // 状态A: 同步完成/空闲 - 隐藏角标
     await chrome.action.setBadgeText({ text: '' });
   } catch (error) {
-    console.error('更新Badge失败:', error);
+    // Badge update failed silently
   }
 }
 
 /**
  * 收集单个标签页
+ * @param tab 要收集的标签页
+ * @param silent 静默模式，不显示错误通知（用于批量收藏）
+ * @returns { success: boolean, autoClassified: boolean } 收藏是否成功，是否自动归类
  */
-async function collectTab(tab: chrome.tabs.Tab): Promise<boolean> {
+async function collectTab(tab: chrome.tabs.Tab, silent = false): Promise<{ success: boolean; autoClassified: boolean }> {
   if (!tab.url || !tab.title) {
-    return false;
+    return { success: false, autoClassified: false };
   }
 
   if (isExcludedUrl(tab.url)) {
-    await showNotification(t('notifications.title'), t('notifications.cannotCollect'));
-    return false;
+    if (!silent) {
+      await showNotification(t('notifications.title'), t('notifications.cannotCollect'));
+    }
+    return { success: false, autoClassified: false };
   }
 
   const input: CreateTabInput = {
@@ -125,8 +130,32 @@ async function collectTab(tab: chrome.tabs.Tab): Promise<boolean> {
   await updateBadge();
 
   if (result.isDuplicate) {
-    await showNotification(t('notifications.title'), t('notifications.collectDuplicate'));
-    return false;
+    if (!silent) {
+      await showNotification(t('notifications.title'), t('notifications.collectDuplicate'));
+    }
+    return { success: false, autoClassified: false };
+  }
+
+  // 标记是否自动归类
+  let autoClassified = false;
+
+  // 自动应用规则分类（仅对新添加的tab）
+  if (result.tab) {
+    try {
+      const groups = await groupService.getAll();
+      const matchedGroupId = await customRuleService.match(result.tab.url, groups);
+
+      if (matchedGroupId !== undefined && matchedGroupId !== null) {
+        // 规则匹配成功，更新tab的groupId
+        await tabService.update({
+          id: result.tab.id,
+          groupId: matchedGroupId,
+        });
+        autoClassified = true;
+      }
+    } catch (error) {
+      // 不影响收藏流程，继续执行
+    }
   }
 
   // 收藏后关闭页面
@@ -136,11 +165,11 @@ async function collectTab(tab: chrome.tabs.Tab): Promise<boolean> {
     try {
       await chrome.tabs.remove(tab.id);
     } catch (e) {
-      console.error('[TabDav] 关闭标签页失败:', e);
+      // Tab close failed silently
     }
   }
 
-  return true;
+  return { success: true, autoClassified };
 }
 
 // ============ 右键菜单 ============
@@ -159,10 +188,6 @@ function safeCreateMenu(options: chrome.contextMenus.CreateProperties): void {
     chrome.contextMenus.create(options);
   } catch (e) {
     // 忽略重复 ID 错误，这些只是警告
-    const error = e as Error;
-    if (!error.message?.includes('duplicate')) {
-      console.warn('创建菜单项失败:', options.id, error.message);
-    }
   }
 }
 
@@ -233,7 +258,7 @@ async function initContextMenus(): Promise<void> {
 
     contextMenusInitialized = true;
   } catch (error) {
-    console.error('初始化右键菜单失败:', error);
+    // Context menu initialization failed silently
   }
 }
 
@@ -247,12 +272,12 @@ async function handleContextMenuClick(
   switch (info.menuItemId) {
     case CONTEXT_MENU_COLLECT_CURRENT:
       if (tab) {
-        const success = await collectTab(tab);
-        if (success) {
-          await showNotification(
-            t('notifications.title'),
-            t('notifications.collected', { title: tab.title || '' })
-          );
+        const result = await collectTab(tab);
+        if (result.success) {
+          const message = result.autoClassified
+            ? t('notifications.collectedAndClassified', { title: tab.title || '' })
+            : t('notifications.collected', { title: tab.title || '' });
+          await showNotification(t('notifications.title'), message);
         }
       }
       break;
@@ -261,17 +286,22 @@ async function handleContextMenuClick(
       if (tab?.windowId !== undefined) {
         const tabs = await chrome.tabs.query({ windowId: tab.windowId });
         let collected = 0;
+        let autoClassified = 0;
 
         for (const t of tabs) {
-          if (await collectTab(t)) {
+          const result = await collectTab(t, true); // 使用静默模式
+          if (result.success) {
             collected++;
+            if (result.autoClassified) {
+              autoClassified++;
+            }
           }
         }
 
-        await showNotification(
-          t('notifications.title'),
-          t('notifications.collectedMultiple', { count: String(collected) })
-        );
+        const message = autoClassified > 0
+          ? t('notifications.collectedMultipleAndClassified', { collected: String(collected), classified: String(autoClassified) })
+          : t('notifications.collectedMultiple', { count: String(collected) });
+        await showNotification(t('notifications.title'), message);
       }
       break;
 
@@ -292,7 +322,30 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
     const input = payload as CreateTabInput;
     const result = await tabService.add(input);
     await updateBadge();
-    return { tab: result.tab, isDuplicate: result.isDuplicate };
+
+    // 标记是否自动归类
+    let autoClassified = false;
+
+    // 自动应用规则分类（仅对新添加的tab）
+    if (result.tab && !result.isDuplicate) {
+      try {
+        const groups = await groupService.getAll();
+        const matchedGroupId = await customRuleService.match(result.tab.url, groups);
+
+        if (matchedGroupId !== undefined && matchedGroupId !== null) {
+          // 规则匹配成功，更新tab的groupId
+          await tabService.update({
+            id: result.tab.id,
+            groupId: matchedGroupId,
+          });
+          autoClassified = true;
+        }
+      } catch (error) {
+        // 不影响添加流程，继续执行
+      }
+    }
+
+    return { tab: result.tab, isDuplicate: result.isDuplicate, autoClassified };
   },
 
   [MESSAGE_TYPES.TAB_DELETE]: async (payload: unknown) => {
@@ -504,6 +557,189 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
     return { success: true };
   },
 
+  // AI分类 - 调用LLM API
+  [MESSAGE_TYPES.AI_CLASSIFY_CALL_LLM]: async (payload: unknown) => {
+    const { apiUrl, apiKey, modelName, targetLists, sourceTabs } = payload as {
+      apiUrl: string;
+      apiKey: string;
+      modelName: string;
+      targetLists: Array<{ id: string; title: string; type: string }>;
+      sourceTabs: Array<{ id: string; title: string; url: string }>;
+    };
+
+    const SYSTEM_PROMPT = `You are a tab classification AI for TabDav. Classify browser tabs into user-defined lists by analyzing URL patterns and titles.
+
+# List Types
+1. ACTION (type: 'action'): Interactive tasks - dashboards, editors, forms, admin panels
+   URL signals: /edit, /create, /admin, /dashboard, /settings, /compose, /new, /cart, /issues, /pulls
+
+2. BUFFER (type: 'buffer'): Reading/learning content - articles, videos, docs, tutorials
+   URL signals: /blog, /article, /post, /docs, /wiki, /tutorial, /guide, /watch, /read
+
+# Classification Priority
+1. URL Pattern (highest): /edit → ACTION, /blog → BUFFER
+2. Title Keywords: "Edit", "Dashboard" → ACTION; "How to", "Tutorial" → BUFFER
+3. Topic Match: Match tab topic to list title (e.g., "React Tutorial" → "Frontend Learning")
+4. Confidence: Only assign if ≥75% confident, else return null
+5. Special URLs: chrome://, about:, blank pages → always null
+
+# Output Rules
+- Return ONLY a valid JSON array (no markdown, no code blocks, no explanation)
+- Each tab gets exactly ONE groupId (from provided list IDs) or null
+- Use exact list IDs from TargetLists, never invent new IDs
+
+Example output:
+[{"groupId":"list-1","tabUrl":"https://example.com/edit"},{"groupId":null,"tabUrl":"chrome://newtab"}]
+
+Classify now.`;
+
+    try {
+      // 构建User Prompt
+      const userPrompt = JSON.stringify({
+        TargetLists: targetLists,
+        SourceTabs: sourceTabs,
+      });
+
+      // 构建API URL
+      let baseUrl = apiUrl.trim();
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+      baseUrl = baseUrl.replace(/\/v1\/chat\/completions$/, '');
+      const fullApiUrl = `${baseUrl}/v1/chat/completions`;
+
+      // 创建AbortController用于超时控制
+      // 动态超时：基础90秒 + 每个标签页额外3秒
+      const baseTimeout = 90000; // 90秒基础超时
+      const perTabTimeout = 3000; // 每个标签页额外3秒
+      const dynamicTimeout = baseTimeout + (sourceTabs.length * perTabTimeout);
+      const maxTimeout = 180000; // 最大180秒
+      const finalTimeout = Math.min(dynamicTimeout, maxTimeout);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), finalTimeout);
+
+      try {
+        const response = await fetch(fullApiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'Connection': 'keep-alive',
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.1, // 降低随机性，提高分类一致性
+            max_tokens: 4096,
+            top_p: 0.9, // 添加top_p提高输出质量
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+
+          // 尝试解析错误响应为JSON
+          let errorDetail = errorText;
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorDetail = errorJson.error?.message || errorJson.message || errorText;
+          } catch (e) {
+            // 如果不是JSON，使用原始文本
+          }
+
+          throw new Error(`API返回错误 (${response.status}): ${errorDetail}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+          throw new Error('API返回内容为空');
+        }
+
+        // 清理可能的markdown代码块标记
+        let cleanContent = content.trim();
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        // 解析JSON结果
+        const result = JSON.parse(cleanContent);
+
+        return { success: true, data: result };
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error(`请求超时（${finalTimeout / 1000}秒）。建议减少每批处理的标签页数量或检查网络连接。`);
+        }
+
+        // 检查是否是网络错误
+        if (fetchError instanceof TypeError) {
+          throw new Error(`网络请求失败: ${fetchError.message}. 请检查API URL是否正确，以及网络连接是否正常。`);
+        }
+
+        throw fetchError;
+      }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  },
+
+  // 自定义规则 - 自动分类
+  [MESSAGE_TYPES.RULE_AUTO_CLASSIFY]: async (payload: unknown) => {
+    const { tabIds } = payload as { tabIds?: string[] };
+
+    try {
+      // 获取所有分组（作为目标列表）
+      const groups = await groupService.getAll();
+
+      // 获取要分类的tabs
+      let tabs;
+      if (tabIds && tabIds.length > 0) {
+        // 指定了tabIds，只处理这些tabs
+        const allTabs = await tabService.getAll();
+        tabs = allTabs.filter(tab => tabIds.includes(tab.id));
+      } else {
+        // 未指定tabIds，处理所有inbox中的tabs
+        const allTabs = await tabService.getAll();
+        tabs = allTabs.filter(tab => !tab.groupId && !tab.deletedAt);
+      }
+
+      if (tabs.length === 0) {
+        return { success: true, matched: 0, unmatched: 0, results: [] };
+      }
+
+      // 应用规则
+      const result = await customRuleService.applyRulesToTabs(tabs, groups);
+
+      // 更新tabs的groupId
+      for (const item of result.results) {
+        await tabService.update({
+          id: item.tabId,
+          groupId: item.groupId || undefined,
+        });
+      }
+
+      // 更新Badge
+      await updateBadge();
+
+      return { success: true, ...result };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  },
+
   // 同步测试
   [MESSAGE_TYPES.SYNC_TEST]: async () => {
     return syncEngine.testConnection();
@@ -563,7 +799,6 @@ async function handleMessage(message: {
   const handler = messageHandlers[message.type];
 
   if (!handler) {
-    console.error('[DEBUG handleMessage] 未找到处理器:', message.type);
     return { success: false, error: `Unknown message type: ${message.type}` };
   }
 
@@ -571,7 +806,6 @@ async function handleMessage(message: {
     const result = await handler(message.payload);
     return { success: true, data: result };
   } catch (error) {
-    console.error(`[DEBUG handleMessage] 处理错误 ${message.type}:`, error);
     return { success: false, error: String(error) };
   }
 }
@@ -607,7 +841,7 @@ async function init(): Promise<void> {
       try {
         await syncEngine.sync();
       } catch (error) {
-        console.error('启动同步失败:', error);
+        // Startup sync failed silently
       }
     }, 2000);
   }
@@ -632,7 +866,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse(result);
     })
     .catch(error => {
-      console.error('[DEBUG onMessage] 处理错误:', message.type, error);
       sendResponse({ success: false, error: String(error) });
     });
   return true; // 异步响应
@@ -673,12 +906,12 @@ chrome.commands.onCommand.addListener(async command => {
   if (command === 'collect-current-tab') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) {
-      const success = await collectTab(tab);
-      if (success) {
-        await showNotification(
-          t('notifications.title'),
-          t('notifications.collected', { title: tab.title || '' })
-        );
+      const result = await collectTab(tab);
+      if (result.success) {
+        const message = result.autoClassified
+          ? t('notifications.collectedAndClassified', { title: tab.title || '' })
+          : t('notifications.collected', { title: tab.title || '' });
+        await showNotification(t('notifications.title'), message);
       }
     }
   } else if (command === 'collect-all-tabs') {
@@ -686,17 +919,22 @@ chrome.commands.onCommand.addListener(async command => {
     if (tab?.windowId !== undefined) {
       const tabs = await chrome.tabs.query({ windowId: tab.windowId });
       let collected = 0;
+      let autoClassified = 0;
 
       for (const t of tabs) {
-        if (await collectTab(t)) {
+        const result = await collectTab(t, true); // 使用静默模式
+        if (result.success) {
           collected++;
+          if (result.autoClassified) {
+            autoClassified++;
+          }
         }
       }
 
-      await showNotification(
-        t('notifications.title'),
-        t('notifications.collectedMultiple', { count: String(collected) })
-      );
+      const message = autoClassified > 0
+        ? t('notifications.collectedMultipleAndClassified', { collected: String(collected), classified: String(autoClassified) })
+        : t('notifications.collectedMultiple', { count: String(collected) });
+      await showNotification(t('notifications.title'), message);
     }
   }
 });

@@ -461,7 +461,6 @@ export async function downloadFromWebDAV(webdavClient: {
       tabs: data.tabs || {},
     };
   } catch (error) {
-    console.error('[RelationalSync] Download failed:', error);
     return createEmptySyncData();
   }
 }
@@ -644,7 +643,6 @@ export async function performSync(params: {
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[RelationalSync] Sync failed:', error);
 
     return {
       success: false,

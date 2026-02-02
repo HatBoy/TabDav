@@ -20,7 +20,7 @@ async function initApp(): Promise<void> {
     const [language] = await Promise.all([settingsService.getLanguage(), themeManager.init()]);
     await setLocale(language as any);
   } catch (error) {
-    console.error('[TabDav] Popup 初始化失败:', error);
+    // Popup initialization failed silently
   }
 }
 

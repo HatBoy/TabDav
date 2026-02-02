@@ -91,6 +91,12 @@ export const MESSAGE_TYPES = {
   SETTINGS_RESET: 'settings/reset',
   SETTINGS_LANGUAGE_UPDATE: 'settings/language-update',
 
+  // AI分类操作
+  AI_CLASSIFY_CALL_LLM: 'ai/classify-call-llm',
+
+  // 自定义规则操作
+  RULE_AUTO_CLASSIFY: 'rule/auto-classify', // 应用规则自动分类
+
   // 统计操作
   STATS_GET: 'stats/get',
 

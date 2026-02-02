@@ -34,6 +34,24 @@ export interface SyncSettings {
 }
 
 /**
+ * LLM模型设置
+ */
+export interface LLMSettings {
+  /** 模型地址 */
+  apiUrl: string;
+  /** API密钥 */
+  apiKey: string;
+  /** 模型名称 */
+  modelName: string;
+  /** 并发数（默认1） */
+  concurrency: number;
+  /** 分批数（默认20） */
+  batchSize: number;
+  /** 重试数（默认3） */
+  retryCount: number;
+}
+
+/**
  * 用户设置
  */
 export interface UserSettings {
@@ -43,6 +61,8 @@ export interface UserSettings {
   webdav: WebDavSettings;
   /** 同步配置 */
   sync: SyncSettings;
+  /** LLM模型配置 */
+  llm: LLMSettings;
   /** 主题模式 */
   theme: ThemeMode;
   /** 界面语言 */
@@ -77,6 +97,14 @@ export const DEFAULT_SETTINGS: UserSettings = {
     autoSyncInterval: 10,
     syncOnStartup: false,
     conflictStrategy: 'local',
+  },
+  llm: {
+    apiUrl: '',
+    apiKey: '',
+    modelName: '',
+    concurrency: 1,
+    batchSize: 20,
+    retryCount: 3,
   },
   theme: 'system',
   language: 'en',

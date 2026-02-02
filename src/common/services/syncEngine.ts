@@ -45,7 +45,6 @@ export class SyncEngine {
     try {
       this.client = await createClientFromSettings();
     } catch (error) {
-      console.error('[SyncEngine] 创建客户端失败:', error);
       return { success: false, message: '配置读取失败' };
     }
 
@@ -116,7 +115,7 @@ export class SyncEngine {
         try {
           remoteData = JSON.parse(remoteResult.data);
         } catch {
-          console.warn('解析远程数据失败，将使用本地数据');
+          // Parse failed, use local data
         }
       }
 
@@ -166,7 +165,6 @@ export class SyncEngine {
         try {
           await this.saveSnapshot(exportData);
         } catch (error) {
-          console.error('[SyncEngine] ❌ 快照保存失败:', error);
           throw new Error(t('errors.snapshotSaveFailed'));
         }
 
@@ -191,7 +189,7 @@ export class SyncEngine {
         try {
           await this.saveSnapshot(remoteData!);
         } catch (error) {
-          console.error('[SyncEngine] ❌ 快照保存失败:', error);
+          // Snapshot save failed silently
         }
 
         return {
@@ -266,7 +264,7 @@ export class SyncEngine {
         try {
           await this.saveSnapshot(exportData);
         } catch (error) {
-          console.error('[SyncEngine] ❌ 快照保存失败:', error);
+          // Snapshot save failed silently
         }
 
         return {
@@ -331,7 +329,6 @@ export class SyncEngine {
       try {
         await this.saveSnapshot(exportData);
       } catch (error) {
-        console.error('[SyncEngine] ❌ 快照保存失败:', error);
         // 快照保存失败应该导致整个同步失败，因为下次同步将无法正确检测删除操作
         throw new Error(t('errors.snapshotSaveFailed'));
       }
@@ -581,8 +578,6 @@ export class SyncEngine {
       const S = snapshotTabMap.get(urlKey);
       const R = remoteTabMap.get(urlKey);
 
-      const title = L?.title || S?.title || R?.title || 'Unknown';
-
       // Case 1: L=null, S=null, R=exists → ADD to Local
       if (!L && !S && R) {
         mergedTabMap.set(urlKey, R);
@@ -630,7 +625,6 @@ export class SyncEngine {
       }
 
       // Should not reach here
-      console.warn(`[SyncEngine] ⚠️ Tab unhandled case: ${title}, L=${!!L}, S=${!!S}, R=${!!R}`);
     }
 
     // ========== 合并 Groups (基于 ID，三路合并) ==========

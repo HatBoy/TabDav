@@ -64,23 +64,54 @@ Inbox 是你的临时停机坪。为了防止囤积，我们引入了基于时�
 * **交互 - Open & Keep (打开保留)**：点击标题打开网页，条目保留在列表中。
 * **导出清空 - Export & Clear**：点击底部按钮，**一键生成 Markdown 列表**并清空当前清单。完美粘贴至 Obsidian 或 Notion。
 
+### 3. 🧠 AI 智能分类 (AI Smart Sort)
+Inbox 堆积如山？让 LLM 帮你完成最后一步的整理工作，而不是仅仅依靠关键词匹配。
+
+#### 🎯 意图优先 (Intent-First) —— *不仅仅是分类，更是理解*
+* **隐喻**：经验丰富的私人秘书、图书管理员。
+* **逻辑 - 语境识别**：AI 不只看标题，还会分析 URL 结构和你的清单类型。
+    * 遇到 `Jira`、`Figma` 或 `GitHub Issues` 链接，它会自动归入 **待办清单 (Action)**。
+    * 遇到 `Medium`、`YouTube` 或 `技术博客`，它会自动归入 **待阅清单 (Buffer)**。
+
+#### 🛡️ 绝对秩序 (Zero Chaos) —— *拒绝熵增*
+* **隐喻**：收纳师，而非装修队。
+* **原则 - 绝不新建**：AI **严禁**自动创建新清单。它只会将 Tab 放入你已建立的容器中。如果 AI 无法确信（置信度低），它会把 Tab 留在 Inbox 让你决定，绝不制造“幻觉分类”。
+
+#### 🔒 数据主权 (BYOK Model) —— *Bring Your Own Key*
+* **隐私**：你的 API Key 和数据仅在本地浏览器和 API 提供商（如 OpenAI/DeepSeek）之间传输。**没有中间商，没有数据留存。**
+
+### 4. ⚡️ 自定义规则 (Custom Rules) —— *自动化的精准打击*
+对于那些高频访问且意图明确的网站，无需 AI 猜测，你可以设定确定性的规则来实现“秒级分拣”。
+
+* **多种匹配模式**：支持 **域名匹配 (Domain)**、**前缀匹配 (Prefix)** 和 **正则表达式 (RegEx)**。
+    * *场景举例*：将所有 `github.com/*/issues` 的链接自动归入 **Work (Action List)**。
+    * *场景举例*：将所有 `youtube.com` 的视频自动归入 **Watch Later (Buffer List)**。
+* **优先级最高**：系统会优先执行你设定的规则。只有未命中任何规则的 Tab，才会交给 AI 或留在 Inbox。
+* **可视化测试**：在创建规则时，你可以直接输入 URL 进行测试，确保规则逻辑符合预期（所见即所得）。
+
 
 ## 📸 截图预览
 
 ### 1. 标签管理
 *一键保存当前窗口的所有标签页。*
 
-![Tab List View](assets/screenshot_list.png)
+![Tab List View](assets/111.png)
 
 ### 2. 设置与同步
 *轻松配置 WebDAV 连接信息。*
 
-![Settings View](assets/screenshot_settings.png)
+![Settings View](assets/222.png)
 
 ### 3. 实用工具
-*标签分组管理、一键导出Markdown。*
+*标签分组管理、一键导出Markdown、自定义规则自动分类。*
 
-![Tab List View](assets/screenshot_toolkit.png)
+![Toolkit View](assets/444.png)
+![Toolkit View](assets/555.png)
+
+### 4. AI分类
+*AI一键自动分类*
+
+![AI View](assets/333.png)
 
 ## 🛠 安装指南
 

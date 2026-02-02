@@ -198,12 +198,6 @@ class DataIOService {
 
           // 完整性检查：如果groupId引用的group不存在，删除groupId
           if (finalGroupId && !allGroupIds.has(finalGroupId)) {
-            console.warn(
-              '[DataIO] 发现孤立Tab:',
-              tabData.title,
-              '引用的分组不存在:',
-              finalGroupId
-            );
             finalGroupId = undefined; // 删除无效的groupId
             result.orphanedTabsFixed++;
           }
@@ -255,7 +249,6 @@ class DataIOService {
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[DataIO] 导入失败:', error);
       return {
         success: false,
         message: `Import failed: ${errorMessage}`,
@@ -307,7 +300,6 @@ class DataIOService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[DataIO] 清除数据失败:', error);
       return {
         success: false,
         message: `Clear failed: ${errorMessage}`,

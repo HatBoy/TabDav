@@ -111,7 +111,7 @@ export async function loadLocaleMessages(locale: LocaleCode): Promise<void> {
     // 扁平化嵌套消息
     localeMessages[locale] = flattenMessages(messages);
   } catch (error) {
-    console.error(`Failed to load locale messages for ${locale}:`, error);
+    // Locale load failed silently
   }
 }
 

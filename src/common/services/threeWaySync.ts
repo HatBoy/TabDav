@@ -374,7 +374,6 @@ export async function downloadFromWebDAV(webdavClient: {
     const data = JSON.parse(json) as SyncData;
     return data.tabs || {};
   } catch (error) {
-    console.error('[ThreeWaySync] Download failed:', error);
     return {};
   }
 }
@@ -604,7 +603,6 @@ export async function performSync(params: {
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[ThreeWaySync] Sync failed:', error);
 
     return {
       success: false,

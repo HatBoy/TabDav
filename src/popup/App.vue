@@ -133,6 +133,65 @@
             <span class="badge-count">{{ inboxTabCount }}</span>
           </template>
         </div>
+        <!-- AI分类按钮 -->
+        <button
+          class="ai-classify-btn"
+          :disabled="inboxTabCount === 0 || isClassifying"
+          :title="$t('popup.aiClassify.tooltip')"
+          @click="startAIClassify"
+        >
+          <span v-if="!isClassifying" class="ai-icon">✨</span>
+          <svg
+            v-else
+            class="spinner-icon rainbow-spinner"
+            viewBox="0 0 50 50"
+          >
+            <defs>
+              <linearGradient id="rainbowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#ff0080;stop-opacity:1" />
+                <stop offset="25%" style="stop-color:#ff8c00;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#40e0d0;stop-opacity:1" />
+                <stop offset="75%" style="stop-color:#7b68ee;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#ff0080;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <circle
+              cx="25"
+              cy="25"
+              r="20"
+              fill="none"
+              stroke="url(#rainbowGradient)"
+              stroke-width="4"
+              stroke-dasharray="90 150"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+
+        <!-- AI分类进度条 -->
+        <div v-if="isClassifying" class="classify-progress-container">
+          <div class="classify-progress">
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :style="{ width: `${(classifyProgress.current / classifyProgress.total) * 100}%` }"
+              ></div>
+            </div>
+            <span class="progress-text">{{ classifyProgress.current }} / {{ classifyProgress.total }}</span>
+          </div>
+          <div class="classify-hint-wrapper">
+            <div class="classify-hint-scroll">
+              <span class="classify-hint-text">{{ $t('popup.aiClassify.hint') }}</span>
+              <span class="classify-hint-text">{{ $t('popup.aiClassify.hint') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI分类结果 -->
+        <div v-if="classifyResult" class="classify-result">
+          <div class="classify-result-line">{{ $t('popup.aiClassify.resultSuccess', { count: classifyResult.success }) }}</div>
+          <div class="classify-result-line">{{ $t('popup.aiClassify.resultFailed', { count: classifyResult.failed }) }}</div>
+        </div>
       </div>
 
       <div v-else-if="currentView === 'lists'" class="toolbar-right">
@@ -839,6 +898,60 @@
       </div>
     </div>
 
+    <!-- AI分类预览弹窗 -->
+    <div
+      v-if="showClassifyPreview && classifyPreviewData"
+      class="modal-overlay"
+      @click.self="showClassifyPreview = false"
+    >
+      <div class="modal classify-preview-modal">
+        <div class="modal-header">
+          <h3>{{ $t('popup.aiClassify.preview.title') }}</h3>
+          <button class="modal-close" @click="showClassifyPreview = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body classify-preview-body">
+          <div class="preview-info-grid">
+            <div class="preview-info-item">
+              <div class="preview-label">{{ $t('popup.aiClassify.preview.tabCount') }}</div>
+              <div class="preview-value">{{ classifyPreviewData.tabCount }}</div>
+            </div>
+            <div class="preview-info-item">
+              <div class="preview-label">{{ $t('popup.aiClassify.preview.batchCount') }}</div>
+              <div class="preview-value">{{ classifyPreviewData.batchCount }}</div>
+            </div>
+            <div class="preview-info-item">
+              <div class="preview-label">{{ $t('popup.aiClassify.preview.estimatedTime') }}</div>
+              <div class="preview-value">{{ $t('popup.aiClassify.preview.minutes', { count: Math.ceil(classifyPreviewData.estimatedTime / 60) }) }}</div>
+            </div>
+            <div class="preview-info-item">
+              <div class="preview-label">{{ $t('popup.aiClassify.preview.estimatedCost') }}</div>
+              <div class="preview-value">${{ classifyPreviewData.estimatedCost.toFixed(3) }}</div>
+            </div>
+            <div class="preview-info-item preview-info-full">
+              <div class="preview-label">{{ $t('popup.aiClassify.preview.estimatedTokens') }}</div>
+              <div class="preview-value">{{ classifyPreviewData.estimatedTokens.toLocaleString() }} tokens</div>
+            </div>
+          </div>
+          <div class="preview-hint">
+            {{ $t('popup.aiClassify.preview.hint') }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="showClassifyPreview = false">
+            {{ $t('common.cancel') }}
+          </button>
+          <button class="btn primary" @click="executeAIClassify">
+            {{ $t('popup.aiClassify.preview.confirm') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast 通知组件 -->
     <Toast ref="toastRef" />
   </div>
@@ -854,6 +967,8 @@ import type { Group } from '../common/types/group';
 import { themeManager } from '../common/services/themeService';
 import { t as rawT } from '../common/i18n';
 import { initTheme, setupThemeSync } from '../common/theme';
+import { classifyCacheService } from '../common/services/classifyCacheService';
+import { customRuleService } from '../common/services/customRuleService';
 import Toast from './components/Toast.vue';
 import ViewSelector from './components/ViewSelector.vue';
 
@@ -913,6 +1028,19 @@ const showClearHistoryModal = ref(false); // 清空History确认弹窗
 const showExportConfirmModal = ref(false);
 const exportedTabs = ref<TabItem[]>([]); // 已导出的tabs
 
+// AI分类状态
+const isClassifying = ref(false); // 是否正在分类
+const classifyProgress = ref({ current: 0, total: 0 }); // 分类进度
+const classifyResult = ref<{ success: number; failed: number } | null>(null); // 分类结果
+const showClassifyPreview = ref(false); // 是否显示分类预览
+const classifyPreviewData = ref<{
+  tabCount: number;
+  batchCount: number;
+  estimatedTime: number; // 秒
+  estimatedCost: number; // 美元
+  estimatedTokens: number;
+} | null>(null);
+
 // 打开设置页面
 function openSettingsPage(): void {
   chrome.runtime.openOptionsPage();
@@ -958,7 +1086,6 @@ async function manualSync(): Promise<void> {
       } else {
         // 同步失败（syncEngine 返回了 success: false），2秒后打开设置页面
         const errorMsg = syncResult.error || t('errors.unknown');
-        console.error('[ManualSync] 同步失败:', errorMsg);
         toastRef.value?.error(getSyncErrorMessage(errorMsg));
         setTimeout(() => {
           chrome.runtime.openOptionsPage();
@@ -967,7 +1094,6 @@ async function manualSync(): Promise<void> {
     } else {
       // 消息处理失败（不太可能走到这里，因为 handleMessage 总是返回 success: true）
       const errorMsg = response?.error || t('errors.unknown');
-      console.error('[ManualSync] 消息处理失败:', errorMsg);
       toastRef.value?.error(getSyncErrorMessage(errorMsg));
       setTimeout(() => {
         chrome.runtime.openOptionsPage();
@@ -979,7 +1105,6 @@ async function manualSync(): Promise<void> {
       await loadData();
     }
   } catch (error) {
-    console.error('[ManualSync] Sync error:', error);
     const errorMsg = String(error);
     toastRef.value?.error(getSyncErrorMessage(errorMsg));
     setTimeout(() => {
@@ -1424,7 +1549,6 @@ async function copyTabAsMarkdown(tab: TabItem): Promise<void> {
     // 显示成功提示
     toastRef.value?.success(t('popup.tab.copySuccess'));
   } catch (error) {
-    console.error('Failed to copy:', error);
     toastRef.value?.error('Copy failed');
   }
 }
@@ -1549,10 +1673,9 @@ async function createGroup(): Promise<void> {
       newListType.value = ListType.ACTION; // Reset to Action List
       showCreateGroup.value = false;
     } else {
-      console.error('[DEBUG createGroup] 创建失败:', response);
     }
   } catch (e) {
-    console.error('创建分组失败:', e);
+    // Error creating group
   }
 }
 
@@ -1614,7 +1737,6 @@ async function deleteGroup(): Promise<void> {
       groupToDelete.value = null;
     }
   } catch (e) {
-    console.error('删除分组失败:', e);
   }
 }
 
@@ -1623,7 +1745,7 @@ async function collectCurrentTab(): Promise<void> {
   if (!tab?.url || !tab.title || !tab.id) return;
 
   if (isExcludedUrl(tab.url)) {
-    alert(t('notifications.cannotCollect'));
+    toastRef.value?.warning(t('notifications.cannotCollect'));
     return;
   }
 
@@ -1632,10 +1754,16 @@ async function collectCurrentTab(): Promise<void> {
     payload: { url: tab.url, title: tab.title, favicon: tab.favIconUrl },
   });
 
-  if (response && (response as any).isDuplicate) {
-    alert(t('notifications.collectDuplicate'));
+
+  if (response?.data?.isDuplicate) {
+    toastRef.value?.warning(t('notifications.collectDuplicate'));
   } else {
     await loadData();
+
+    // 只有自动归类时才显示提示
+    if (response?.data?.autoClassified) {
+      toastRef.value?.success(t('notifications.collectedAndClassified', { title: tab.title }));
+    }
 
     // 收藏后关闭页面
     const settings = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_GET });
@@ -1643,7 +1771,6 @@ async function collectCurrentTab(): Promise<void> {
       try {
         await chrome.tabs.remove(tab.id);
       } catch (e) {
-        console.error('[TabDav] 关闭标签页失败:', e);
       }
     }
   }
@@ -1653,15 +1780,32 @@ async function collectAllTabs(): Promise<void> {
   const allTabs = await chrome.tabs.query({});
   const validTabs = allTabs.filter(t => t.url && t.title && !isExcludedUrl(t.url));
 
+  let collected = 0;
+  let autoClassified = 0;
+
   // 收藏所有有效标签
   for (const tab of validTabs) {
-    await chrome.runtime.sendMessage({
+    const response = await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.TAB_ADD,
       payload: { url: tab.url!, title: tab.title!, favicon: tab.favIconUrl },
     });
+
+  
+    if (response?.success && !response?.data?.isDuplicate) {
+      collected++;
+      if (response?.data?.autoClassified) {
+        autoClassified++;
+      }
+    }
   }
 
   await loadData();
+
+
+  // 只有自动归类时才显示提示
+  if (autoClassified > 0) {
+    toastRef.value?.success(t('notifications.collectedMultipleAndClassified', { collected: String(collected), classified: String(autoClassified) }));
+  }
 
   // 收藏后关闭页面
   const settings = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_GET });
@@ -1671,7 +1815,6 @@ async function collectAllTabs(): Promise<void> {
       try {
         await chrome.tabs.remove(tabIdsToClose);
       } catch (e) {
-        console.error('[TabDav] 批量关闭标签页失败:', e);
       }
     }
   }
@@ -1688,7 +1831,6 @@ async function loadData(): Promise<void> {
       tabs.value = [];
     }
   } catch (e) {
-    console.error('加载标签失败:', e);
     tabs.value = [];
   }
 
@@ -1700,7 +1842,6 @@ async function loadData(): Promise<void> {
       groups.value = [];
     }
   } catch (e) {
-    console.error('加载分组失败:', e);
     groups.value = [];
   }
 
@@ -1712,7 +1853,6 @@ async function loadData(): Promise<void> {
       confirmSingleDelete.value = (settingsResponse.data as any)?.confirmSingleDelete === true; // 默认 false
     }
   } catch (e) {
-    console.error('加载设置失败:', e);
     theme.value = 'light';
   }
 
@@ -1727,7 +1867,7 @@ async function loadData(): Promise<void> {
       }
     }
   } catch (e) {
-    console.error('Inbox清理失败:', e);
+    // Inbox cleanup failed
   }
 
   // 执行History清理：永久删除超过30天的tabs
@@ -1741,10 +1881,367 @@ async function loadData(): Promise<void> {
       }
     }
   } catch (e) {
-    console.error('History清理失败:', e);
+    // History cleanup failed
   }
 
   loaded.value = true;
+}
+
+// 计算分类预估信息
+function calculateClassifyEstimate(
+  tabCount: number,
+  batchSize: number,
+  concurrency: number = 1,
+  retryCount: number = 0
+) {
+  const batchCount = Math.ceil(tabCount / batchSize);
+
+  // Token估算
+  const systemPromptTokens = 400; // 精简后的Prompt约400 tokens
+  const perTabTokens = 50; // 每个标签页约50 tokens (title + url)
+  const outputTokens = 200; // 输出约200 tokens
+  const tokensPerBatch = systemPromptTokens + (batchSize * perTabTokens) + outputTokens;
+
+  // 考虑重试的token估算（假设10%失败率）
+  const failureRate = 0.1;
+  const retryMultiplier = 1 + (failureRate * retryCount);
+  const totalTokens = Math.ceil(tokensPerBatch * batchCount * retryMultiplier);
+
+  // 成本估算 (假设 $0.01/1K tokens，可根据实际模型调整)
+  const costPerToken = 0.00001; // $0.01 / 1000
+  const estimatedCost = totalTokens * costPerToken;
+
+  // 时间估算 - 考虑并发
+  const timePerBatch = 30; // 每批约30秒 (包含网络延迟和LLM处理)
+  const serialBatchGroups = Math.ceil(batchCount / concurrency);
+  const estimatedTime = serialBatchGroups * timePerBatch;
+
+  return {
+    tabCount,
+    batchCount,
+    estimatedTime,
+    estimatedCost,
+    estimatedTokens: totalTokens,
+  };
+}
+
+// AI分类相关函数
+// 调用LLM API进行分类（带重试）- 通过background script
+async function callLLMClassify(
+  targetLists: Array<{ id: string; title: string; type: string }>,
+  sourceTabs: Array<{ id: string; title: string; url: string }>
+): Promise<Array<{ groupId: string | null; tabUrl: string }> | null> {
+
+  // 获取LLM设置
+  const settingsResponse = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_GET });
+  const llmSettings = settingsResponse?.data?.llm;
+
+  if (!llmSettings || !llmSettings.apiUrl || !llmSettings.apiKey || !llmSettings.modelName) {
+    return null;
+  }
+
+  // 从设置中读取重试次数
+  const retries = llmSettings.retryCount || 3;
+
+  // 重试逻辑
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+
+      const response = await chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.AI_CLASSIFY_CALL_LLM,
+        payload: {
+          apiUrl: llmSettings.apiUrl,
+          apiKey: llmSettings.apiKey,
+          modelName: llmSettings.modelName,
+          targetLists,
+          sourceTabs,
+        },
+      });
+
+
+      // response的结构是 { success: true, data: { success: true, data: [...] } }
+      // 我们需要取出内层的data
+      if (response?.success && response?.data) {
+        const innerResponse = response.data;
+        if (innerResponse?.success && innerResponse?.data) {
+          return innerResponse.data;
+        } else {
+          const errorMsg = innerResponse?.error || 'API调用失败';
+
+          // 判断是否是不应该重试的错误
+          const shouldNotRetry =
+            errorMsg.includes('401') || // 认证失败
+            errorMsg.includes('403') || // 权限不足
+            errorMsg.includes('API返回错误 (4') || // 4xx客户端错误
+            errorMsg.includes('API URL是否正确'); // URL配置错误
+
+          if (shouldNotRetry) {
+            return null;
+          }
+
+          throw new Error(errorMsg);
+        }
+      } else {
+        throw new Error(response?.error || '消息传递失败');
+      }
+    } catch (error) {
+      if (attempt === retries - 1) {
+        return null;
+      }
+      // 指数退避重试策略：500ms, 1000ms, 2000ms
+      const delay = 500 * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  return null;
+}
+
+// 主AI分类函数
+async function startAIClassify(): Promise<void> {
+
+  if (isClassifying.value) {
+    return;
+  }
+
+  // 检查LLM配置
+  const settingsResponse = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_GET });
+  const llmSettings = settingsResponse?.data?.llm;
+
+
+  if (!llmSettings || !llmSettings.apiUrl || !llmSettings.apiKey || !llmSettings.modelName) {
+    toastRef.value?.error(t('popup.aiClassify.configRequired'));
+    setTimeout(() => {
+      chrome.runtime.openOptionsPage();
+    }, 2000);
+    return;
+  }
+
+  // 获取inbox中的所有tabs
+  const inboxTabs = tabs.value.filter(tab => !tab.groupId && !tab.deletedAt);
+
+  if (inboxTabs.length === 0) {
+    toastRef.value?.info(t('popup.aiClassify.noTabsToClassify'));
+    return;
+  }
+
+  // 获取所有Lists（只包含action和buffer类型）
+  const targetLists = groups.value.map(group => ({
+    id: group.id,
+    title: group.name,
+    type: group.listType || 'action',
+  }));
+
+  if (targetLists.length === 0) {
+    toastRef.value?.error(t('popup.aiClassify.noListsAvailable'));
+    return;
+  }
+
+  // 计算预估信息并显示预览
+  const batchSize = llmSettings.batchSize || 10;
+  const concurrency = llmSettings.concurrency || 1;
+  const retryCount = llmSettings.retryCount || 0;
+  const estimate = calculateClassifyEstimate(inboxTabs.length, batchSize, concurrency, retryCount);
+  classifyPreviewData.value = estimate;
+  showClassifyPreview.value = true;
+
+  // 等待用户确认，实际分类逻辑将在用户点击确认后执行
+}
+
+// 执行实际的AI分类（用户确认后调用）
+async function executeAIClassify(): Promise<void> {
+  showClassifyPreview.value = false;
+
+  // 重新获取数据（确保数据最新）
+  const settingsResponse = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_GET });
+  const llmSettings = settingsResponse?.data?.llm;
+
+  const inboxTabs = tabs.value.filter(tab => !tab.groupId && !tab.deletedAt);
+  const targetLists = groups.value.map(group => ({
+    id: group.id,
+    title: group.name,
+    type: group.listType || 'action',
+  }));
+
+  // 开始分类
+  isClassifying.value = true;
+  classifyProgress.value = { current: 0, total: inboxTabs.length };
+  classifyResult.value = null;
+
+  // 从设置中读取配置参数
+  const BATCH_SIZE = llmSettings.batchSize || 10; // 降低默认批量大小从20到10
+  const CONCURRENT_REQUESTS = llmSettings.concurrency || 1;
+  let successCount = 0;
+  let failedCount = 0;
+
+  try {
+    // 1. 先检查自定义规则
+    const ruleTabs: Array<{ tab: TabItem; groupId: string | null }> = [];
+    const tabsAfterRule: TabItem[] = [];
+
+    for (const tab of inboxTabs) {
+      const ruleGroupId = await customRuleService.match(tab.url, groups.value);
+      if (ruleGroupId !== undefined) {
+        // 规则匹配成功
+        ruleTabs.push({ tab, groupId: ruleGroupId });
+      } else {
+        // 无规则匹配，继续检查缓存
+        tabsAfterRule.push(tab);
+      }
+    }
+
+
+    // 2. 清除过期缓存
+    await classifyCacheService.clearExpired();
+
+    // 3. 检查剩余tab的缓存
+    const tabsToClassify: Array<{ id: string; title: string; url: string }> = [];
+    const cachedTabs: Array<{ tab: TabItem; groupId: string | null }> = [];
+
+    for (const tab of tabsAfterRule) {
+      const cachedGroupId = await classifyCacheService.get(tab.url, groups.value);
+      if (cachedGroupId !== undefined) {
+        // 缓存命中
+        cachedTabs.push({ tab, groupId: cachedGroupId });
+      } else {
+        // 无缓存，需要调用LLM
+        tabsToClassify.push({
+          id: tab.id,
+          title: tab.title,
+          url: tab.url,
+        });
+      }
+    }
+
+
+    // 4. 先应用规则匹配结果
+    for (const { tab, groupId } of ruleTabs) {
+      if (groupId && groupId !== 'null') {
+        try {
+          await chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.TAB_UPDATE,
+            payload: {
+              id: tab.id,
+              groupId: groupId,
+            },
+          });
+          successCount++;
+        } catch (error) {
+          failedCount++;
+        }
+      } else {
+        // 规则明确指定不分类
+        failedCount++;
+      }
+      classifyProgress.value.current++;
+    }
+
+    // 5. 应用缓存结果
+    for (const { tab, groupId } of cachedTabs) {
+      if (groupId && groupId !== 'null') {
+        try {
+          await chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.TAB_UPDATE,
+            payload: {
+              id: tab.id,
+              groupId: groupId,
+            },
+          });
+          successCount++;
+        } catch (error) {
+          failedCount++;
+        }
+      } else {
+        failedCount++;
+      }
+      classifyProgress.value.current++;
+    }
+
+    // 6. 如果没有需要LLM分类的，直接结束
+    if (tabsToClassify.length === 0) {
+      classifyResult.value = { success: successCount, failed: failedCount };
+      isClassifying.value = false;
+
+      // 3秒后清除结果并重新加载数据
+      setTimeout(() => {
+        classifyResult.value = null;
+        loadData();
+      }, 3000);
+      return;
+    }
+
+    // 7. 分批处理需要LLM分类的tabs
+    const batches: Array<Array<{ id: string; title: string; url: string }>> = [];
+    for (let i = 0; i < tabsToClassify.length; i += BATCH_SIZE) {
+      batches.push(tabsToClassify.slice(i, i + BATCH_SIZE));
+    }
+
+    // 并发处理批次
+    for (let i = 0; i < batches.length; i += CONCURRENT_REQUESTS) {
+      const currentBatches = batches.slice(i, i + CONCURRENT_REQUESTS);
+
+      const results = await Promise.all(
+        currentBatches.map(batch => callLLMClassify(targetLists, batch))
+      );
+
+      // 处理每个批次的结果
+      for (const result of results) {
+        if (result) {
+          // 根据分类结果更新tabs
+          for (const item of result) {
+            const tab = inboxTabs.find(t => t.url === item.tabUrl);
+            if (tab) {
+              // 保存到缓存
+              await classifyCacheService.set(tab.url, groups.value, item.groupId);
+
+              if (item.groupId && item.groupId !== 'null') {
+                // 移动到指定分组
+                try {
+                  await chrome.runtime.sendMessage({
+                    type: MESSAGE_TYPES.TAB_UPDATE,
+                    payload: {
+                      id: tab.id,
+                      groupId: item.groupId,
+                    },
+                  });
+                  successCount++;
+                } catch (error) {
+                  failedCount++;
+                }
+              } else {
+                // 保持在inbox
+                failedCount++;
+              }
+              classifyProgress.value.current++;
+            }
+          }
+        } else {
+          // 整个批次失败 - 可能是网络或API错误
+          const batchSize = currentBatches.flat().length;
+          failedCount += batchSize;
+          classifyProgress.value.current += batchSize;
+
+          // 如果是第一批就失败，提示用户检查配置
+          if (i === 0 && failedCount === batchSize) {
+            toastRef.value?.error(t('popup.aiClassify.failed'));
+          }
+        }
+      }
+    }
+
+    // 显示结果
+    classifyResult.value = { success: successCount, failed: failedCount };
+
+    // 3秒后清除结果并重新加载数据
+    setTimeout(() => {
+      classifyResult.value = null;
+      loadData();
+    }, 3000);
+  } catch (error) {
+    toastRef.value?.error(t('popup.aiClassify.failed'));
+  } finally {
+    isClassifying.value = false;
+  }
 }
 
 // 生命周期
@@ -2081,6 +2578,176 @@ watch(
   color: var(--color-warning, #ea580c);
 }
 
+/* AI分类按钮 */
+.ai-classify-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.ai-classify-btn:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  transform: scale(1.05);
+}
+
+.ai-classify-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.ai-classify-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.ai-classify-btn .ai-icon {
+  line-height: 1;
+}
+
+.ai-classify-btn .spinner-icon {
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  transform-origin: center;
+  display: block;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* AI分类进度条容器 */
+.classify-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 12px;
+  flex: 1;
+  min-width: 0; /* 允许flex子元素收缩 */
+  max-width: 100%;
+}
+
+/* AI分类进度条 */
+.classify-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0; /* 允许收缩 */
+}
+
+.progress-bar {
+  flex: 1;
+  min-width: 60px;
+  height: 6px;
+  background-color: var(--bg-hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* AI分类提示文字 - 滚动播放 */
+.classify-hint-wrapper {
+  width: 100%;
+  overflow: hidden;
+  background-color: #fee;
+  border-radius: 8px;
+  padding: 6px 0;
+  margin-top: 4px;
+}
+
+.classify-hint-scroll {
+  display: flex;
+  white-space: nowrap;
+  animation: scroll-left 15s linear infinite;
+}
+
+.classify-hint-text {
+  font-size: var(--font-size-xs);
+  color: #dc2626;
+  font-weight: var(--font-weight-medium);
+  padding: 0 20px;
+  display: inline-block;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* AI分类结果 */
+.classify-result {
+  margin-left: 12px;
+  padding: 6px 12px;
+  background-color: var(--color-success-light, #d1fae5);
+  color: var(--color-success, #10b981);
+  border-radius: 12px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  max-width: calc(100% - 24px); /* 防止超出屏幕 */
+  animation: slideIn 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.classify-result-line {
+  line-height: 1.4;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* 内联分组标签栏 */
 .group-tabs-inline {
   display: flex;
@@ -2090,11 +2757,28 @@ watch(
   overflow-y: hidden;
   flex: 1;
   min-width: 0;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  padding-bottom: 4px;
 }
 
 .group-tabs-inline::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.group-tabs-inline::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.group-tabs-inline::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.group-tabs-inline::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.8);
 }
 
 /* 内联分组标签 - 紧凑的文字链接风格 */
@@ -3100,6 +3784,52 @@ watch(
   padding: var(--spacing-sm);
   background-color: var(--bg-secondary);
   border-radius: var(--radius-md);
+}
+
+/* ========== AI分类预览弹窗 ========== */
+.classify-preview-modal {
+  width: 340px;
+}
+
+.classify-preview-body {
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.preview-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.preview-info-item {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.preview-value {
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.preview-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--spacing-sm);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
 }
 
 /* ========== 现代化弹窗样式 (Notion/Linear 风格) ========== */

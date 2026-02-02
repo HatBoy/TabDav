@@ -17,7 +17,6 @@ const isInitialized = ref(false);
 async function applyThemeById(themeId: string): Promise<void> {
   const theme = THEMES[themeId];
   if (!theme) {
-    console.warn(`Theme "${themeId}" not found, falling back to blue`);
     return;
   }
 
@@ -29,7 +28,7 @@ async function applyThemeById(themeId: string): Promise<void> {
   try {
     await saveTheme(themeId);
   } catch (error) {
-    console.error('Failed to save theme preference:', error);
+    // Theme save failed silently
   }
 }
 
@@ -43,7 +42,6 @@ export async function initTheme(): Promise<void> {
     const savedTheme = await loadTheme();
     await applyThemeById(savedTheme);
   } catch (error) {
-    console.error('Failed to load theme:', error);
     // Fall back to default theme
     await applyThemeById('blue');
   } finally {

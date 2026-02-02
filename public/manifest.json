@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TabDav - Tab Manager & Sync",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Cross-device tab management browser extension with WebDav sync. Continue reading anywhere, anytime.",
   "author": "TabDav",
   "homepage_url": "https://github.com/HatBoy/TabDav",
@@ -34,7 +34,7 @@
       "run_at": "document_idle"
     }
   ],
-  "permissions": ["tabs", "storage", "alarms", "contextMenus"],
+  "permissions": ["tabs", "storage", "alarms", "contextMenus", "notifications"],
   "host_permissions": ["<all_urls>"],
   "web_accessible_resources": [
     {
@@ -64,5 +64,8 @@
       },
       "description": "Save all tabs"
     }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'"
   }
 }

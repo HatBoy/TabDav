@@ -47,6 +47,12 @@ class SettingsService {
       needsSave = true;
     }
 
+    // 确保 llm 字段存在（兼容旧数据）
+    if (!settings.llm) {
+      settings.llm = { ...DEFAULT_SETTINGS.llm };
+      needsSave = true;
+    }
+
     // 如果有新增字段，需要保存到数据库
     if (needsSave) {
       await this.save(settings);
@@ -55,6 +61,11 @@ class SettingsService {
     // 解密密码
     if (settings.webdav.password) {
       settings.webdav.password = xorDecrypt(settings.webdav.password);
+    }
+
+    // 解密 LLM API Key
+    if (settings.llm.apiKey) {
+      settings.llm.apiKey = xorDecrypt(settings.llm.apiKey);
     }
 
     return settings;
@@ -85,6 +96,14 @@ class SettingsService {
         autoSyncInterval: settings.sync.autoSyncInterval,
         syncOnStartup: settings.sync.syncOnStartup,
         conflictStrategy: settings.sync.conflictStrategy,
+      },
+      llm: {
+        apiUrl: settings.llm.apiUrl,
+        apiKey: settings.llm.apiKey ? xorEncrypt(settings.llm.apiKey) : '',
+        modelName: settings.llm.modelName,
+        concurrency: settings.llm.concurrency,
+        batchSize: settings.llm.batchSize,
+        retryCount: settings.llm.retryCount,
       },
     };
 
