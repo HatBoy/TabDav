@@ -44,6 +44,29 @@ We believe your browser shouldn't be a graveyard for information.
 * **🌍 Multi-language Support**: Fully localized for English, Simplified/Traditional Chinese, Japanese, German, French, Spanish, Portuguese, and Russian.
 * **🚀 Lightweight**: No bloatware. A clean, efficient UI focused purely on productivity.
 
+## 📸 Screenshots
+
+### 1. Tab Management
+*Save your current window's tabs with one click.*
+
+![Tab List View](assets/111.png)
+
+### 2. Settings
+*Easily configure your WebDAV endpoint.*
+
+![Settings View](assets/222.png)
+
+### 3. Toolkit
+*Tag grouping management, one-click export to Markdown, and automatic categorization with custom rules.*
+
+![Toolkit View](assets/444.png)
+![Toolkit View](assets/555.png)
+
+### 4. AI Classification
+*AI One-Click Automatic Classification*
+
+![AI View](assets/333.png)
+
 ## ✨ Core Features (v2.0)
 
 ### 1. 📥 Inbox & Natural Entropy
@@ -92,28 +115,6 @@ For high-frequency sites with clear intent, skip the AI guesswork. Set up determ
 * **Top Priority**: Your custom rules take precedence. Only tabs that don't match any rule will be passed to AI or left in the Inbox.
 * **Visual Testing**: Includes a built-in tester. Input a URL while creating a rule to verify it matches exactly as you expect (WYSIWYG).
 
-## 📸 Screenshots
-
-### 1. Tab Management
-*Save your current window's tabs with one click.*
-
-![Tab List View](assets/111.png)
-
-### 2. Settings
-*Easily configure your WebDAV endpoint.*
-
-![Settings View](assets/222.png)
-
-### 3. Toolkit
-*Tag grouping management, one-click export to Markdown, and automatic categorization with custom rules.*
-
-![Toolkit View](assets/444.png)
-![Toolkit View](assets/555.png)
-
-### 4. AI Classification
-*AI One-Click Automatic Classification*
-
-![AI View](assets/333.png)
 
 ## 🛠 Installation
 

@@ -46,6 +46,29 @@ TabDav 的使命很简单：**增加动力，减少阻力，推动你清空 Tab�
 * **🌍 多语言支持**：全面支持简体/繁体中文、英语、日语、德语、法语、西班牙语、葡萄牙语和俄语。
 * **🚀 轻量极速**：无冗余功能，专为效率设计的简洁 UI。
 
+## 📸 截图预览
+
+### 1. 标签管理
+*一键保存当前窗口的所有标签页。*
+
+![Tab List View](assets/111.png)
+
+### 2. 设置与同步
+*轻松配置 WebDAV 连接信息。*
+
+![Settings View](assets/222.png)
+
+### 3. 实用工具
+*标签分组管理、一键导出Markdown、自定义规则自动分类。*
+
+![Toolkit View](assets/444.png)
+![Toolkit View](assets/555.png)
+
+### 4. AI分类
+*AI一键自动分类*
+
+![AI View](assets/333.png)
+
 ## ✨ v2.0 核心特性
 
 ### 1. 📥 Inbox 与自然熵增 (Natural Entropy)
@@ -90,30 +113,6 @@ Inbox 堆积如山？让 LLM 帮你完成最后一步的整理工作，而不是
     * *场景举例*：将所有 `youtube.com` 的视频自动归入 **Watch Later (Buffer List)**。
 * **优先级最高**：系统会优先执行你设定的规则。只有未命中任何规则的 Tab，才会交给 AI 或留在 Inbox。
 * **可视化测试**：在创建规则时，你可以直接输入 URL 进行测试，确保规则逻辑符合预期（所见即所得）。
-
-
-## 📸 截图预览
-
-### 1. 标签管理
-*一键保存当前窗口的所有标签页。*
-
-![Tab List View](assets/111.png)
-
-### 2. 设置与同步
-*轻松配置 WebDAV 连接信息。*
-
-![Settings View](assets/222.png)
-
-### 3. 实用工具
-*标签分组管理、一键导出Markdown、自定义规则自动分类。*
-
-![Toolkit View](assets/444.png)
-![Toolkit View](assets/555.png)
-
-### 4. AI分类
-*AI一键自动分类*
-
-![AI View](assets/333.png)
 
 ## 🛠 安装指南
 
