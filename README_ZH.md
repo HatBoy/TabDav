@@ -24,6 +24,8 @@
 
 与那些将数据锁定在私有云端的“稍后读”或标签管理工具不同，TabDav 将数据主权交还给你。你可以使用自己的 Nextcloud、SFTPGo、NAS（群晖/威联通）或任何支持 WebDAV 的网盘（如坚果云）来同步数据。
 
+![cn](assets/cn.jpeg)
+
 ## 📖 重新定义 Tab 管理
 
 在 v2.0 中，**TabDav** 迎来了一次彻底的进化。我们将它从一个封闭的“书签同步工具”重构为一个服务于 Notion/Obsidian 等笔记软件的 **“Web 信息缓冲区 (Browser Buffer)”**。
@@ -116,7 +118,7 @@ Inbox 堆积如山？让 LLM 帮你完成最后一步的整理工作，而不是
 ## 🛠 安装指南
 
 ### 方法 1：加载已解压的扩展程序 (推荐)
-1.  下载本仓库的最新 Release 代码或 Clone 到本地。
+1.  下载本仓库的最新 Release 代码或 Clone 到本地编译。
 2.  打开 Chrome 或 Edge 浏览器，访问 `chrome://extensions/`。
 3.  开启右上角的 **开发者模式 (Developer mode)**。
 4.  点击 **加载已解压的扩展程序 (Load unpacked)**，选择本项目文件夹。

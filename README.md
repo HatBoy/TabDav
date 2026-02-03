@@ -24,7 +24,7 @@
 
 Unlike other "Read It Later" tools or tab managers that lock your data in proprietary clouds, TabDav gives you full control. You can sync your tabs using your own Nextcloud, SFTPGo, NAS (Synology/QNAP), or any WebDAV-compatible cloud storage.
 
-**Your data stays with you. Secure, private, and free.**
+![en](assets/en.jpeg)
 
 ## 📖 Redefining Tab Management
 
@@ -118,7 +118,7 @@ For high-frequency sites with clear intent, skip the AI guesswork. Set up determ
 ## 🛠 Installation
 
 ### Option 1: Load Unpacked (Recommended for now)
-1.  Download the latest release code or clone this repository.
+1.  Download the latest release code or clone this repository build.
 2.  Open Chrome or Edge and navigate to `chrome://extensions/`.
 3.  Toggle **Developer mode** (top right corner).
 4.  Click **Load unpacked** and select the extension directory.
