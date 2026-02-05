@@ -280,6 +280,8 @@ export default {
         showUnsyncedBadgeDesc: 'Mostrar el recuento de elementos no sincronizados en el icono de la extensión y el botón de sincronización',
         confirmSingleDelete: 'Confirmar antes de eliminar una pestaña',
         confirmSingleDeleteDesc: 'Mostrar diálogo de confirmación al eliminar pestañas individuales',
+        showNotifications: 'Mostrar notificaciones de colección',
+        showNotificationsDesc: 'Mostrar mensajes de notificación al guardar pestañas mediante atajos o menú contextual',
       },
       appearance: {
         title: 'Apariencia',

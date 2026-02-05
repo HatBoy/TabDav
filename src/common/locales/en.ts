@@ -286,6 +286,8 @@ export default {
         showUnsyncedBadgeDesc: 'Display the count of unsynced items on the extension icon and sync button',
         confirmSingleDelete: 'Confirm before deleting a single tab',
         confirmSingleDeleteDesc: 'Show confirmation dialog when deleting individual tabs',
+        showNotifications: 'Show collection notifications',
+        showNotificationsDesc: 'Display notification messages when saving tabs via shortcuts or context menu',
       },
       appearance: {
         title: 'Appearance',

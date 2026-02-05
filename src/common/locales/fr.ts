@@ -280,6 +280,8 @@ export default {
         showUnsyncedBadgeDesc: "Afficher le nombre d'éléments non synchronisés sur l'icône de l'extension et le bouton de synchronisation",
         confirmSingleDelete: 'Confirmer avant de supprimer un onglet',
         confirmSingleDeleteDesc: 'Afficher le dialogue de confirmation lors de la suppression d\'onglets individuels',
+        showNotifications: 'Afficher les notifications de collecte',
+        showNotificationsDesc: 'Afficher les messages de notification lors de l\'enregistrement d\'onglets via des raccourcis ou le menu contextuel',
       },
       appearance: {
         title: 'Apparence',

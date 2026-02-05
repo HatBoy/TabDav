@@ -281,6 +281,8 @@ export default {
         showUnsyncedBadgeDesc: 'Anzahl der nicht synchronisierten Elemente auf dem Erweiterungssymbol und der Synchronisierungsschaltfläche anzeigen',
         confirmSingleDelete: 'Vor dem Löschen eines einzelnen Tabs bestätigen',
         confirmSingleDeleteDesc: 'Bestätigungsdialog beim Löschen einzelner Tabs anzeigen',
+        showNotifications: 'Sammlungsbenachrichtigungen anzeigen',
+        showNotificationsDesc: 'Benachrichtigungen anzeigen beim Speichern von Tabs über Tastenkombinationen oder Kontextmenü',
       },
       appearance: {
         title: 'Erscheinungsbild',

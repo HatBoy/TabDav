@@ -286,6 +286,8 @@ export default {
         showUnsyncedBadgeDesc: '在扩展图标和同步按钮上显示待同步数量',
         confirmSingleDelete: '删除单个标签时确认',
         confirmSingleDeleteDesc: '开启后，点击单个标签的删除按钮时会弹出确认框',
+        showNotifications: '显示收藏提醒',
+        showNotificationsDesc: '通过快捷键或右键菜单收藏标签页时显示通知消息',
       },
       appearance: {
         title: '外观设置',

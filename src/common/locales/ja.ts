@@ -284,6 +284,8 @@ export default {
         showUnsyncedBadgeDesc: '拡張機能アイコンと同期ボタンに未同期アイテムの数を表示',
         confirmSingleDelete: '単一タブの削除前に確認',
         confirmSingleDeleteDesc: '個別のタブを削除する際に確認ダイアログを表示',
+        showNotifications: 'コレクション通知を表示',
+        showNotificationsDesc: 'ショートカットまたはコンテキストメニューでタブを保存する際に通知メッセージを表示',
       },
       appearance: {
         title: '外観',

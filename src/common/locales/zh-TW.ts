@@ -284,6 +284,8 @@ export default {
         showUnsyncedBadgeDesc: '在擴充功能圖示和同步按鈕上顯示未同步項目的數量',
         confirmSingleDelete: '刪除單一標籤前確認',
         confirmSingleDeleteDesc: '刪除個別標籤時顯示確認對話框',
+        showNotifications: '顯示收藏提醒',
+        showNotificationsDesc: '透過快捷鍵或右鍵選單收藏標籤頁時顯示通知訊息',
       },
       appearance: {
         title: '外觀設定',

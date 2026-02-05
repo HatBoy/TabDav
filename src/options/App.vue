@@ -631,6 +631,22 @@
               <span class="toggle-slider"></span>
             </div>
           </label>
+
+          <!-- Show Notifications -->
+          <label class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-title">{{
+                $t('options.sections.features.showNotifications')
+              }}</span>
+              <span class="settings-row-desc">{{
+                $t('options.sections.features.showNotificationsDesc')
+              }}</span>
+            </div>
+            <div class="toggle-switch">
+              <input v-model="settings.notificationsEnabled" type="checkbox" />
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
         </div>
         </div>
       </section>

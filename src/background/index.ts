@@ -32,6 +32,12 @@ async function showNotification(title: string, message: string): Promise<void> {
     return;
   }
 
+  // 检查用户是否启用了通知
+  const settings = await settingsService.get();
+  if (!settings.notificationsEnabled) {
+    return;
+  }
+
   try {
     await chrome.notifications.create({
       type: 'basic',

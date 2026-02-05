@@ -279,6 +279,8 @@ export default {
         showUnsyncedBadgeDesc: 'Exibir a contagem de itens não sincronizados no ícone da extensão e no botão de sincronização',
         confirmSingleDelete: 'Confirmar antes de excluir uma aba',
         confirmSingleDeleteDesc: 'Mostrar diálogo de confirmação ao excluir abas individuais',
+        showNotifications: 'Mostrar notificações de coleta',
+        showNotificationsDesc: 'Exibir mensagens de notificação ao salvar abas por meio de atalhos ou menu de contexto',
       },
       appearance: {
         title: 'Aparência',

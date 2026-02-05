@@ -269,20 +269,26 @@
         @click="handleTabClick(tab)"
       >
         <!-- Favicon -->
-        <img
-          v-if="tab.favicon"
-          :src="tab.favicon"
-          class="tab-favicon"
-          @error="handleFaviconError"
-        />
-        <div v-else class="tab-favicon-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path
-              d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-            />
-          </svg>
+        <div class="tab-favicon-wrapper">
+          <img
+            v-if="tab.favicon && !failedFavicons.has(tab.favicon)"
+            :src="tab.favicon"
+            :class="['tab-favicon', { 'tab-favicon-loaded': loadedFavicons.has(tab.favicon) }]"
+            @error="handleFaviconError"
+            @load="handleFaviconLoad"
+          />
+          <div
+            v-if="!tab.favicon || !loadedFavicons.has(tab.favicon) || failedFavicons.has(tab.favicon)"
+            class="tab-favicon-placeholder"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              />
+            </svg>
+          </div>
         </div>
         <!-- 内容区域 -->
         <div class="tab-content">
@@ -1007,6 +1013,8 @@ const newGroupColor = ref(COLORS[0]); // Default to first color (blue-500)
 const newListType = ref<ListType>(ListType.ACTION); // Default to Action List
 const pastelColors = COLORS;
 const loaded = ref(false);
+const failedFavicons = ref<Set<string>>(new Set()); // Track failed favicon URLs
+const loadedFavicons = ref<Set<string>>(new Set()); // Track successfully loaded favicon URLs
 const activeTabGroupDropdown = ref<string | null>(null);
 const showDeleteGroupModal = ref(false);
 const groupToDelete = ref<Group | null>(null);
@@ -1396,7 +1404,18 @@ function getEmptySubtitle(): string {
 
 function handleFaviconError(event: Event): void {
   const img = event.target as HTMLImageElement;
-  img.style.display = 'none';
+  const faviconUrl = img.src;
+  if (faviconUrl) {
+    failedFavicons.value.add(faviconUrl);
+  }
+}
+
+function handleFaviconLoad(event: Event): void {
+  const img = event.target as HTMLImageElement;
+  const faviconUrl = img.src;
+  if (faviconUrl) {
+    loadedFavicons.value.add(faviconUrl);
+  }
 }
 
 function isExcludedUrl(url: string): boolean {
@@ -2985,6 +3004,21 @@ watch(
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-1) 0;
+  scrollbar-gutter: stable;
+}
+
+/* Scrollbar styling for tab list */
+.tab-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tab-list::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 4px;
+}
+
+.tab-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Empty State - Modern Design */
@@ -3050,6 +3084,23 @@ watch(
   flex-shrink: 0;
   margin-top: 2px;
   border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s ease-in;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.tab-favicon-loaded {
+  opacity: 1;
+}
+
+.tab-favicon-wrapper {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  position: relative;
 }
 
 .tab-favicon-placeholder {
@@ -3059,7 +3110,6 @@ watch(
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 2px;
   background-color: var(--bg-tertiary);
   border-radius: var(--radius-sm);
 }
