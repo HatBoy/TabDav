@@ -125,8 +125,8 @@ For high-frequency sites with clear intent, skip the AI guesswork. Set up determ
 4.  Click **Load unpacked** and select the extension directory.
 
 ### Option 2: Web Store
-* *Chrome Web Store: [Coming Soon]*
-* *Edge Add-ons: [Coming Soon]*
+* *Chrome Web Store: [TabDav](https://chromewebstore.google.com/detail/tabdav-tab-manager-sync/jchejgpchlhjjmliopfmilocggkbnmbj)*
+* *Edge Add-ons: [TabDav](https://microsoftedge.microsoft.com/addons/detail/tabdav-tab-manager-sy/ocehmakggndpibonbpikoapiagpcaonn)*
 
 ## ⚙️ Configuration
 

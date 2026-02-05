@@ -123,8 +123,8 @@ Inbox 堆积如山？让 LLM 帮你完成最后一步的整理工作，而不是
 4.  点击 **加载已解压的扩展程序 (Load unpacked)**，选择本项目文件夹。
 
 ### 方法 2：应用商店安装
-* *Chrome 应用商店: [敬请期待]*
-* *Edge 插件商店: [敬请期待]*
+* *Chrome 应用商店: [TabDav](https://chromewebstore.google.com/detail/tabdav-tab-manager-sync/jchejgpchlhjjmliopfmilocggkbnmbj)*
+* *Edge 插件商店: [TabDav](https://microsoftedge.microsoft.com/addons/detail/tabdav-tab-manager-sy/ocehmakggndpibonbpikoapiagpcaonn)*
 
 ## ⚙️ 配置教程
 
