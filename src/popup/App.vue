@@ -964,7 +964,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, inject } from 'vue';
+import { ref, computed, onMounted, watch, inject, nextTick } from 'vue';
 import { formatRelativeTime, getDomain } from '../common/utils/date';
 import { MESSAGE_TYPES } from '../common/constants';
 import { GROUP_COLORS, ViewType, ListType } from '../common/types/group';
@@ -975,6 +975,7 @@ import { t as rawT } from '../common/i18n';
 import { initTheme, setupThemeSync } from '../common/theme';
 import { classifyCacheService } from '../common/services/classifyCacheService';
 import { customRuleService } from '../common/services/customRuleService';
+import { uiStateService } from '../common/services/uiStateService';
 import Toast from './components/Toast.vue';
 import ViewSelector from './components/ViewSelector.vue';
 
@@ -1024,6 +1025,7 @@ const showExportDropdown = ref(false); // 导出下拉菜单显示状态
 const toastRef = ref<InstanceType<typeof Toast> | null>(null);
 const showUnsyncedBadge = ref(true); // 是否显示未同步角标
 const confirmSingleDelete = ref(false); // 是否在删除单个标签时确认
+const isRestoringState = ref(false); // 标志位：是否正在恢复UI状态
 
 // 删除确认弹窗状态
 const showDeleteTabModal = ref(false);
@@ -1751,6 +1753,12 @@ async function deleteGroup(): Promise<void> {
       // 如果当前选中的分组被删除，选中第一个剩余分组（如果有）
       if (selectedGroupId.value === groupToDelete.value!.id) {
         selectedGroupId.value = groups.value.length > 0 ? groups.value[0].id : undefined;
+
+        // 保存更新后的UI状态
+        await uiStateService.saveState({
+          lastView: groups.value.length > 0 ? ViewType.LISTS : ViewType.INBOX,
+          lastGroupId: selectedGroupId.value
+        });
       }
       showDeleteGroupModal.value = false;
       groupToDelete.value = null;
@@ -1862,6 +1870,38 @@ async function loadData(): Promise<void> {
     }
   } catch (e) {
     groups.value = [];
+  }
+
+  // 恢复上次的UI状态（视图和分组选择）
+  try {
+    const savedState = await uiStateService.getState();
+
+    // 验证保存的分组ID是否还存在
+    if (savedState.lastGroupId) {
+      const groupExists = groups.value.some(g => g.id === savedState.lastGroupId);
+      if (!groupExists) {
+        // 分组已被删除，回退到第一个可用分组或undefined
+        savedState.lastGroupId = groups.value.length > 0 ? groups.value[0].id : undefined;
+        if (!savedState.lastGroupId) {
+          // 没有分组了，切换到Inbox视图
+          savedState.lastView = ViewType.INBOX;
+        }
+      }
+    }
+
+    // 设置标志位，防止watcher覆盖恢复的状态
+    isRestoringState.value = true;
+
+    // 先恢复分组选择，再恢复视图
+    selectedGroupId.value = savedState.lastGroupId;
+    currentView.value = savedState.lastView;
+
+    // 使用 nextTick 确保 watcher 执行完毕后再重置标志位
+    await nextTick();
+    isRestoringState.value = false;
+  } catch (e) {
+    // 状态恢复失败，使用默认值（已经在初始化时设置）
+    isRestoringState.value = false;
   }
 
   try {
@@ -2287,13 +2327,38 @@ watch(
 // 监听视图变化，自动选择分组
 watch(
   () => currentView.value,
-  (newView) => {
-    if (newView === ViewType.LISTS) {
-      // 切换到 Lists 视图时，自动选中第一个分组（如果有）
-      selectedGroupId.value = groups.value.length > 0 ? groups.value[0].id : undefined;
-    } else {
-      // 切换到其他视图时，重置分组选择
-      selectedGroupId.value = undefined;
+  async (newView) => {
+    // 如果正在恢复状态，跳过自动选择逻辑
+    if (!isRestoringState.value) {
+      if (newView === ViewType.LISTS) {
+        // 切换到 Lists 视图时，自动选中第一个分组（如果有）
+        selectedGroupId.value = groups.value.length > 0 ? groups.value[0].id : undefined;
+      } else {
+        // 切换到其他视图时，重置分组选择
+        selectedGroupId.value = undefined;
+      }
+
+      // 保存UI状态（只在非恢复状态时保存）
+      if (loaded.value) {
+        await uiStateService.saveState({
+          lastView: newView,
+          lastGroupId: selectedGroupId.value
+        });
+      }
+    }
+  }
+);
+
+// 监听分组选择变化，保存UI状态
+watch(
+  () => selectedGroupId.value,
+  async (newGroupId) => {
+    // 只在Lists视图且数据已加载时保存状态
+    if (loaded.value && currentView.value === ViewType.LISTS) {
+      await uiStateService.saveState({
+        lastView: currentView.value,
+        lastGroupId: newGroupId
+      });
     }
   }
 );
