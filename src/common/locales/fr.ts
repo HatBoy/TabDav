@@ -282,6 +282,8 @@ export default {
         confirmSingleDeleteDesc: 'Afficher le dialogue de confirmation lors de la suppression d\'onglets individuels',
         showNotifications: 'Afficher les notifications de collecte',
         showNotificationsDesc: 'Afficher les messages de notification lors de l\'enregistrement d\'onglets via des raccourcis ou le menu contextuel',
+        dataLifecycle: 'Cycle de vie des données',
+        dataLifecycleDesc: 'Nettoie automatiquement les anciens onglets selon les règles du cycle de vie (archivage automatique après 7 jours dans la boîte de réception, nettoyage de l\'historique après 30 jours)',
       },
       appearance: {
         title: 'Apparence',

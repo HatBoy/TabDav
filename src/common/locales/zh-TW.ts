@@ -286,6 +286,8 @@ export default {
         confirmSingleDeleteDesc: '刪除個別標籤時顯示確認對話框',
         showNotifications: '顯示收藏提醒',
         showNotificationsDesc: '透過快捷鍵或右鍵選單收藏標籤頁時顯示通知訊息',
+        dataLifecycle: '數據生命週期',
+        dataLifecycleDesc: '根據生命週期規則自動清理舊分頁（7天收件匣自動歸檔，30天歷史記錄永久刪除）',
       },
       appearance: {
         title: '外觀設定',

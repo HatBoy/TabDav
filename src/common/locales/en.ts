@@ -288,6 +288,8 @@ export default {
         confirmSingleDeleteDesc: 'Show confirmation dialog when deleting individual tabs',
         showNotifications: 'Show collection notifications',
         showNotificationsDesc: 'Display notification messages when saving tabs via shortcuts or context menu',
+        dataLifecycle: 'Data Lifecycle',
+        dataLifecycleDesc: 'Automatically clean up old tabs based on lifecycle rules (7-day inbox auto-archive, 30-day history cleanup)',
       },
       appearance: {
         title: 'Appearance',

@@ -455,6 +455,11 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
   },
 
   [MESSAGE_TYPES.TAB_CLEANUP_INBOX]: async () => {
+    // Only execute cleanup if data lifecycle is enabled
+    const settings = await settingsService.get();
+    if (!settings.dataLifecycleEnabled) {
+      return { success: true, count: 0 };
+    }
     // 清理Inbox中超过7天未处理的tabs
     const cleanedCount = await tabService.cleanupOldInboxTabs();
     if (cleanedCount > 0) {
@@ -464,6 +469,11 @@ const messageHandlers: Record<string, (payload: unknown) => Promise<unknown>> = 
   },
 
   [MESSAGE_TYPES.TAB_CLEANUP_HISTORY]: async () => {
+    // Only execute cleanup if data lifecycle is enabled
+    const settings = await settingsService.get();
+    if (!settings.dataLifecycleEnabled) {
+      return { success: true, count: 0 };
+    }
     // 永久删除History中超过30天的tabs
     const deletedCount = await tabService.cleanupOldHistoryTabs();
     if (deletedCount > 0) {

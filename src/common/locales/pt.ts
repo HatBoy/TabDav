@@ -281,6 +281,8 @@ export default {
         confirmSingleDeleteDesc: 'Mostrar diálogo de confirmação ao excluir abas individuais',
         showNotifications: 'Mostrar notificações de coleta',
         showNotificationsDesc: 'Exibir mensagens de notificação ao salvar abas por meio de atalhos ou menu de contexto',
+        dataLifecycle: 'Ciclo de Vida dos Dados',
+        dataLifecycleDesc: 'Limpa automaticamente guias antigas com base nas regras do ciclo de vida (arquivamento automático da caixa de entrada após 7 dias, limpeza do histórico após 30 dias)',
       },
       appearance: {
         title: 'Aparência',

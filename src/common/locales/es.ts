@@ -282,6 +282,8 @@ export default {
         confirmSingleDeleteDesc: 'Mostrar diálogo de confirmación al eliminar pestañas individuales',
         showNotifications: 'Mostrar notificaciones de colección',
         showNotificationsDesc: 'Mostrar mensajes de notificación al guardar pestañas mediante atajos o menú contextual',
+        dataLifecycle: 'Ciclo de vida de datos',
+        dataLifecycleDesc: 'Limpia automáticamente pestañas antiguas según reglas de ciclo de vida (archivado automático en bandeja de entrada a los 7 días, limpieza de historial a los 30 días)',
       },
       appearance: {
         title: 'Apariencia',

@@ -283,6 +283,8 @@ export default {
         confirmSingleDeleteDesc: 'Bestätigungsdialog beim Löschen einzelner Tabs anzeigen',
         showNotifications: 'Sammlungsbenachrichtigungen anzeigen',
         showNotificationsDesc: 'Benachrichtigungen anzeigen beim Speichern von Tabs über Tastenkombinationen oder Kontextmenü',
+        dataLifecycle: 'Datenlebenszyklus',
+        dataLifecycleDesc: 'Automatische Bereinigung alter Tabs basierend auf Lebenszyklusregeln (7-tägige Posteingangsarchivierung, 30-tägige Verlaufsbereinigung)',
       },
       appearance: {
         title: 'Erscheinungsbild',

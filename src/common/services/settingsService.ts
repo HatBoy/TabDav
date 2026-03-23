@@ -53,6 +53,12 @@ class SettingsService {
       needsSave = true;
     }
 
+    // 确保 dataLifecycleEnabled 字段存在（兼容旧数据）
+    if (typeof settings.dataLifecycleEnabled !== 'boolean') {
+      settings.dataLifecycleEnabled = DEFAULT_SETTINGS.dataLifecycleEnabled;
+      needsSave = true;
+    }
+
     // 如果有新增字段，需要保存到数据库
     if (needsSave) {
       await this.save(settings);
@@ -79,31 +85,15 @@ class SettingsService {
 
     // 加密密码
     const settingsToSave: UserSettings = {
+      ...settings,
       id: SETTINGS_KEY,
-      theme: settings.theme,
-      language: settings.language,
-      notificationsEnabled: settings.notificationsEnabled,
-      closeAfterCollect: settings.closeAfterCollect,
-      showUnsyncedBadge: settings.showUnsyncedBadge,
-      confirmSingleDelete: settings.confirmSingleDelete,
       webdav: {
-        url: settings.webdav.url,
-        username: settings.webdav.username,
+        ...settings.webdav,
         password: settings.webdav.password ? xorEncrypt(settings.webdav.password) : '',
       },
-      sync: {
-        autoSyncEnabled: settings.sync.autoSyncEnabled,
-        autoSyncInterval: settings.sync.autoSyncInterval,
-        syncOnStartup: settings.sync.syncOnStartup,
-        conflictStrategy: settings.sync.conflictStrategy,
-      },
       llm: {
-        apiUrl: settings.llm.apiUrl,
+        ...settings.llm,
         apiKey: settings.llm.apiKey ? xorEncrypt(settings.llm.apiKey) : '',
-        modelName: settings.llm.modelName,
-        concurrency: settings.llm.concurrency,
-        batchSize: settings.llm.batchSize,
-        retryCount: settings.llm.retryCount,
       },
     };
 

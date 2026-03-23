@@ -77,6 +77,8 @@ export interface UserSettings {
   showUnsyncedBadge?: boolean;
   /** 删除单个标签时确认（可选，默认不确认） */
   confirmSingleDelete?: boolean;
+  /** 启用数据生命周期自动清理（默认禁用） */
+  dataLifecycleEnabled: boolean;
 }
 
 /** 设置存储键 */
@@ -112,6 +114,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   closeAfterCollect: false,
   showUnsyncedBadge: true,
   confirmSingleDelete: false,
+  dataLifecycleEnabled: false,
 };
 
 /**

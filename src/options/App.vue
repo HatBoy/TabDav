@@ -647,6 +647,22 @@
               <span class="toggle-slider"></span>
             </div>
           </label>
+
+          <!-- Data Lifecycle -->
+          <label class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-title">{{
+                $t('options.sections.features.dataLifecycle')
+              }}</span>
+              <span class="settings-row-desc">{{
+                $t('options.sections.features.dataLifecycleDesc')
+              }}</span>
+            </div>
+            <div class="toggle-switch">
+              <input v-model="settings.dataLifecycleEnabled" type="checkbox" />
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
         </div>
         </div>
       </section>
@@ -1829,6 +1845,7 @@ const AUTO_SAVE_FIELDS = [
   'closeAfterCollect',
   'showUnsyncedBadge',
   'confirmSingleDelete',
+  'dataLifecycleEnabled',
   'theme',
   'language',
   'notificationsEnabled',

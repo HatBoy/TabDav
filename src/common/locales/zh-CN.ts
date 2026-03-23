@@ -288,6 +288,8 @@ export default {
         confirmSingleDeleteDesc: '开启后，点击单个标签的删除按钮时会弹出确认框',
         showNotifications: '显示收藏提醒',
         showNotificationsDesc: '通过快捷键或右键菜单收藏标签页时显示通知消息',
+        dataLifecycle: '数据生命周期',
+        dataLifecycleDesc: '根据生命周期规则自动清理旧标签（7天收件箱自动归档，30天历史记录永久删除）',
       },
       appearance: {
         title: '外观设置',

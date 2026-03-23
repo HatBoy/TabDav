@@ -286,6 +286,8 @@ export default {
         confirmSingleDeleteDesc: '個別のタブを削除する際に確認ダイアログを表示',
         showNotifications: 'コレクション通知を表示',
         showNotificationsDesc: 'ショートカットまたはコンテキストメニューでタブを保存する際に通知メッセージを表示',
+        dataLifecycle: 'データライフサイクル',
+        dataLifecycleDesc: 'ライフサイクルルールに基づいて古いタブを自動的にクリーンアップ（7日間のインボックス自動アーカイブ、30日間の履歴クリーンアップ）',
       },
       appearance: {
         title: '外観',
