@@ -214,6 +214,7 @@ const messages: Record<LocaleCode, LocaleMessages> = {
       clearFailed: '清除失败',
       importCheckJsonFormat: '导入失败，请检查文件格式',
       snapshotSaveFailed: '快照保存失败，同步无法完成。请检查浏览器存储空间或权限设置。',
+      remoteDataUnavailable: '远程数据不可用，同步已中止以防止数据丢失。请检查网络连接和 WebDAV 服务器状态。',
     },
     time: {
       justNow: '刚刚',
@@ -706,6 +707,7 @@ const messages: Record<LocaleCode, LocaleMessages> = {
       exportFailed: 'Export failed',
       unknown: 'Unknown error',
       snapshotSaveFailed: 'Snapshot save failed. Sync cannot be completed. Please check browser storage space or permission settings.',
+      remoteDataUnavailable: 'Remote data unavailable. Sync aborted to prevent data loss. Please check your network connection and WebDAV server status.',
       webdavNotConfigured: 'Please configure WebDAV server first',
       mkdirFailed: 'Failed to create sync directory "{path}": {message}',
     },

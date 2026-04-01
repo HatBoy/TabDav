@@ -389,6 +389,7 @@ export default {
     clearFailed: '清除失败',
     importCheckJsonFormat: '导入失败，请检查文件格式',
     snapshotSaveFailed: '快照保存失败，同步无法完成。请检查浏览器存储空间或权限设置。',
+    remoteDataUnavailable: '远程数据不可用，同步已中止以防止数据丢失。请检查网络连接和 WebDAV 服务器状态。',
     webdavNotConfigured: '请先配置 WebDAV 服务器',
     mkdirFailed: '无法创建同步目录 "{path}": {message}',
     llmAuthFailed: '身份验证失败，请检查您的API Key',

@@ -114,8 +114,10 @@ export class SyncEngine {
       if (remoteResult.success && remoteResult.data) {
         try {
           remoteData = JSON.parse(remoteResult.data);
-        } catch {
-          // Parse failed, use local data
+        } catch (parseError) {
+          // 🚨 关键修复：记录解析错误，而不是静默继续
+          console.error('[SyncEngine] Remote data JSON parse failed:', parseError);
+          // remoteData 保持 null，后续会触发保护逻辑
         }
       }
 
@@ -124,6 +126,26 @@ export class SyncEngine {
       const isFirstSync = !snapshotData; // Base 不存在 = 首次同步
       const remoteIsEmpty = !remoteData || !remoteData.tabs || remoteData.tabs.length === 0;
       const localHasData = localData.tabs.length > 0;
+
+      // 🛡️🛡️ 非首次同步保护（数据丢失防护）
+      // 如果快照存在（非首次同步），但远程数据获取失败或为空，且本地有数据
+      // 这可能是网络问题或远程文件损坏，不应清空本地数据
+      const remoteFetchFailed = !remoteResult.success || (remoteResult.success && !remoteResult.data);
+      const remoteParseFailed = remoteResult.success && remoteResult.data && !remoteData;
+
+      if (!isFirstSync && (remoteIsEmpty || remoteFetchFailed || remoteParseFailed) && localHasData) {
+        // 情况：非首次同步 + 远程数据异常 + 本地有数据 → 保护本地数据，中止同步
+        const errorMessage = remoteFetchFailed
+          ? `Remote data fetch failed: ${remoteResult.message}`
+          : remoteParseFailed
+          ? 'Remote data JSON parse failed'
+          : 'Remote data is empty but local has data - possible data loss prevented';
+
+        console.error('[SyncEngine] Data loss protection triggered:', errorMessage);
+
+        // 不执行合并，直接返回错误，保护本地数据
+        throw new Error(t('errors.remoteDataUnavailable'));
+      }
 
       if (isFirstSync && remoteIsEmpty && localHasData) {
         // Case A: 首次同步 + 远程为空 + 本地有数据 → Force Push
@@ -186,10 +208,11 @@ export class SyncEngine {
         await syncMetadataService.markCompleted();
         await syncMetadataService.incrementLocalVersion();
 
+        // 保存快照（必须成功，否则下次同步无法正确检测删除）
         try {
           await this.saveSnapshot(remoteData!);
         } catch (error) {
-          // Snapshot save failed silently
+          throw new Error(t('errors.snapshotSaveFailed'));
         }
 
         return {
@@ -261,10 +284,11 @@ export class SyncEngine {
         await syncMetadataService.markCompleted();
         await syncMetadataService.incrementLocalVersion();
 
+        // 保存快照（必须成功，否则下次同步无法正确检测删除）
         try {
           await this.saveSnapshot(exportData);
         } catch (error) {
-          // Snapshot save failed silently
+          throw new Error(t('errors.snapshotSaveFailed'));
         }
 
         return {

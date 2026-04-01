@@ -434,6 +434,7 @@ export default {
     clearFailed: 'Clear failed',
     importCheckJsonFormat: 'Import failed, please check the file format',
     snapshotSaveFailed: 'Snapshot save failed. Sync cannot be completed. Please check browser storage space or permission settings.',
+    remoteDataUnavailable: 'Remote data unavailable. Sync aborted to prevent data loss. Please check your network connection and WebDAV server status.',
     webdavNotConfigured: 'Please configure WebDAV server first',
     mkdirFailed: 'Failed to create sync directory "{path}": {message}',
     llmAuthFailed: 'Authentication failed. Please check your API Key',
